@@ -12,6 +12,9 @@ export const config = {
     publicView: { limit: 60, windowSeconds: 60 },
     publicRespond: { limit: 10, windowSeconds: 3600 },
     pdf: { limit: 30, windowSeconds: 600 },
+    // Per quote, on top of the per-IP limits, so rotating addresses does not multiply the work.
+    publicRespondPerQuote: { limit: 20, windowSeconds: 3600 },
+    publicPdfPerQuote: { limit: 60, windowSeconds: 600 },
   },
 } as const;
 

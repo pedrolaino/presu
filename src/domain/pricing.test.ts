@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { increasePrice, previewIncrease } from "./pricing";
+import { increasePrice, MAX_PRICE_CENTS, previewIncrease, PriceTooLargeError } from "./pricing";
 
 describe("increasePrice", () => {
   it("applies a percentage rounding half up to the cent", () => {
@@ -12,6 +12,15 @@ describe("increasePrice", () => {
   it("supports decreases above -100%", () => {
     expect(increasePrice(100_000, -2500)).toBe(75_000);
     expect(() => increasePrice(100, -10_000)).toThrow(RangeError);
+  });
+
+  it("rejects results above the largest price instead of losing cents", () => {
+    expect(increasePrice(MAX_PRICE_CENTS, 0)).toBe(MAX_PRICE_CENTS);
+    expect(() => increasePrice(MAX_PRICE_CENTS, 1)).toThrow(PriceTooLargeError);
+    // Two +1000 % increases used to round 12099999999999879 to ...880 through Number().
+    expect(() => increasePrice(increasePrice(9_090_909_090_909, 1000), 100_000)).toThrow(
+      PriceTooLargeError,
+    );
   });
 });
 

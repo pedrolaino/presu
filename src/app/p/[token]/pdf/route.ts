@@ -13,8 +13,21 @@ export async function GET(_req: Request, ctx: RouteContext<"/p/[token]/pdf">) {
       status: 429,
     });
   }
-  const found = await getPublicQuote(db, token);
+  const now = new Date();
+  const found = await getPublicQuote(db, token, now);
   if (!found) return new Response("No encontrado", { status: 404 });
+  if (
+    !(await allowRequest(
+      db,
+      `pdf-quote:${found.quote.id}`,
+      config.rateLimits.publicPdfPerQuote,
+      now,
+    ))
+  ) {
+    return new Response("Hubo muchas descargas seguidas. Probá de nuevo en unos minutos.", {
+      status: 429,
+    });
+  }
 
   const pdf = await renderQuotePdf(found.business, found.quote.number, found.version);
   return new Response(new Uint8Array(pdf), {

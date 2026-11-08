@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
+import { PriceTooLargeError } from "@/domain/pricing";
 import { formatMoney, formatPercent } from "@/lib/numbers";
 import { applyIncrease } from "@/server/actions/catalog";
 import { listCatalog, listCategories, previewBulkIncrease } from "@/server/data/catalog";
@@ -11,10 +12,17 @@ export default async function IncreasePrices({ searchParams }: PageProps<"/app/c
   const params = await searchParams;
   const ids = ([] as string[]).concat(params.id ?? []);
   const request = parseIncrease({ percent: params.percent ?? "", category: params.category, ids });
+  let tooLarge = params.error === "too-large";
   const [items, categories, preview] = await Promise.all([
     listCatalog(db, business.id),
     listCategories(db, business.id),
-    request ? previewBulkIncrease(db, business.id, request.selection, request.bps) : null,
+    request
+      ? previewBulkIncrease(db, business.id, request.selection, request.bps).catch((e) => {
+          if (!(e instanceof PriceTooLargeError)) throw e;
+          tooLarge = true;
+          return null;
+        })
+      : null,
   ]);
   const asked = params.percent !== undefined;
 
@@ -70,6 +78,13 @@ export default async function IncreasePrices({ searchParams }: PageProps<"/app/c
           </button>
         </div>
       </form>
+
+      {tooLarge && (
+        <p className="alert" role="alert">
+          Con ese porcentaje algún precio pasaría de $ 999.999.999.999,99, el máximo permitido. No
+          se cambió ningún precio.
+        </p>
+      )}
 
       {asked && !request && (
         <p className="alert" role="alert">

@@ -21,6 +21,10 @@ export const auth = betterAuth({
     schema: { user, session, account, verification },
   }),
   socialProviders: google,
+  // Guests are created only through `startDemo`, which applies the app's own limits and seeds the
+  // account. Closing the HTTP route keeps anyone from skipping those limits; `auth.api` calls from
+  // the server are not affected.
+  disabledPaths: ["/sign-in/anonymous"],
   plugins: [anonymous({ emailDomainName: "guest.invalid" }), nextCookies()],
 });
 

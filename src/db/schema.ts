@@ -196,8 +196,13 @@ export const quoteEvents = pgTable(
   (t) => [index("quote_events_quote_idx").on(t.quoteId)],
 );
 
-export const rateLimits = pgTable("rate_limits", {
-  key: text("key").primaryKey(),
-  count: integer("count").notNull(),
-  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
-});
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  },
+  // The daily purge deletes ended windows by start time.
+  (t) => [index("rate_limits_window_start_idx").on(t.windowStart)],
+);

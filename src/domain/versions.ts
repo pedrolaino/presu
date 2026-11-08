@@ -85,3 +85,20 @@ export function latestVersion<T extends { version: number }>(versions: T[]): T |
 export function liveVersion<T extends { version: number; sentAt: Date | null }>(versions: T[]) {
   return latestVersion(versions.filter((v) => v.sentAt)) ?? latestVersion(versions);
 }
+
+/**
+ * The version that stands for the quote in the owner's detail page and PDF. Once the client
+ * answered it is the version they answered (an unsent draft saved earlier never replaces it);
+ * while the quote is open it is the latest one, draft included.
+ */
+export function documentVersion<T extends { version: number; sentAt: Date | null }>(
+  versions: T[],
+  quote: { status: QuoteStatus; acceptedVersion: number | null },
+): T | undefined {
+  if (quote.status === "accepted") {
+    const accepted = versions.find((v) => v.version === quote.acceptedVersion);
+    if (accepted) return accepted;
+  }
+  if (quote.status === "accepted" || quote.status === "rejected") return liveVersion(versions);
+  return latestVersion(versions);
+}

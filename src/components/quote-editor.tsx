@@ -85,8 +85,30 @@ export function QuoteEditor({
   const money = (cents: number) => formatMoney(cents, v.currency);
   const sameCurrency = catalog.filter((c) => c.currency === v.currency);
 
+  /** Prices are not converted, so switching currency asks first and unlinks catalog items of the old one. */
+  function changeCurrency(next: Currency) {
+    setPick("");
+    if (
+      v.items.length > 0 &&
+      !window.confirm(
+        `Los precios no se convierten: los ítems quedan con los mismos números, ahora en ${next}. Revisalos después de cambiar. ¿Cambiar la moneda?`,
+      )
+    ) {
+      return;
+    }
+    const currencyOf = new Map(catalog.map((c) => [c.id, c.currency]));
+    set({
+      currency: next,
+      items: v.items.map((it) =>
+        it.catalogItemId && currencyOf.get(it.catalogItemId) !== next
+          ? { ...it, catalogItemId: null }
+          : it,
+      ),
+    });
+  }
+
   function addFromCatalog() {
-    const item = catalog.find((c) => c.id === pick);
+    const item = sameCurrency.find((c) => c.id === pick);
     if (!item) return;
     set({
       items: [
@@ -204,7 +226,7 @@ export function QuoteEditor({
               <select
                 id="currency"
                 value={v.currency}
-                onChange={(e) => set({ currency: e.target.value as Currency })}
+                onChange={(e) => changeCurrency(e.target.value as Currency)}
               >
                 <option value="ARS">Pesos (ARS)</option>
                 <option value="USD">Dólares (USD)</option>
