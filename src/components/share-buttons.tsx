@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePdf, LinkSimple, WhatsappLogo } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { shareQuote } from "@/server/actions/quotes";
@@ -62,23 +63,27 @@ export function ShareButtons({
     <div className="stack">
       <div className="actions">
         <button type="button" onClick={copy}>
+          <LinkSimple size={18} weight="bold" aria-hidden className="ic" />
           Copiar link
         </button>
         <a
           href={whatsapp}
           target="_blank"
           rel="noopener noreferrer"
+          className="btn btn-secondary"
           onClick={() => void markSent()}
         >
+          <WhatsappLogo size={18} weight="bold" aria-hidden className="ic" />
           Enviar por WhatsApp
         </a>
         {canSharePdf && (
-          <button type="button" onClick={sharePdf}>
+          <button type="button" className="btn-secondary" onClick={sharePdf}>
+            <FilePdf size={18} weight="bold" aria-hidden className="ic" />
             Compartir PDF
           </button>
         )}
       </div>
-      <p role="status" aria-live="polite">
+      <p role="status" aria-live="polite" className="muted">
         {status}
       </p>
     </div>

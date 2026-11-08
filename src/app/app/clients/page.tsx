@@ -1,3 +1,4 @@
+import { Plus } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { db } from "@/db";
 import { listClients } from "@/server/data/clients";
@@ -10,46 +11,47 @@ export default async function Clients({ searchParams }: PageProps<"/app/clients"
   const rows = await listClients(db, business.id, search);
 
   return (
-    <div className="stack">
-      <h1>Clientes</h1>
-      <p>
-        <Link href="/app/clients/new">Nuevo cliente</Link>
-      </p>
-      <form role="search" className="actions">
-        <label htmlFor="q">Buscar</label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={search}
-          placeholder="Nombre, email o teléfono"
-        />
-        <button type="submit">Buscar</button>
+    <>
+      <div className="page-head">
+        <h1>Clientes</h1>
+        <Link href="/app/clients/new" className="btn">
+          <Plus size={18} weight="bold" aria-hidden className="ic" />
+          Nuevo cliente
+        </Link>
+      </div>
+      <form role="search" className="toolbar">
+        <div className="field">
+          <label htmlFor="q">Buscar</label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={search}
+            placeholder="Nombre, email o teléfono"
+          />
+        </div>
+        <button type="submit" className="btn-secondary">
+          Buscar
+        </button>
       </form>
       {rows.length === 0 ? (
-        <p>{search ? "No hay clientes que coincidan." : "Todavía no cargaste clientes."}</p>
+        <p className="notice">
+          {search
+            ? "No hay clientes que coincidan con la búsqueda."
+            : "Todavía no cargaste clientes."}
+        </p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Nombre</th>
-              <th scope="col">Teléfono</th>
-              <th scope="col">Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <Link href={`/app/clients/${c.id}`}>{c.name}</Link>
-                </td>
-                <td>{c.phone}</td>
-                <td>{c.email}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul className="rows" aria-label="Clientes">
+          {rows.map((c) => (
+            <li key={c.id}>
+              <Link href={`/app/clients/${c.id}`} className="row row-simple">
+                <span className="row-title">{c.name}</span>
+                <span className="row-meta">{[c.phone, c.email].filter(Boolean).join(", ")}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </>
   );
 }

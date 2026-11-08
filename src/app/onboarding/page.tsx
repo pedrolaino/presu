@@ -12,22 +12,24 @@ export default async function Onboarding() {
   if (existing) redirect("/app/quotes");
 
   return (
-    <main className="page stack">
+    <main className="reading stack">
       <h1>Datos de tu negocio</h1>
-      <p>Aparecen en tus presupuestos. Podés cambiarlos cuando quieras.</p>
-      <BusinessForm
-        onboarding
-        values={{
-          name: "",
-          phone: "",
-          email: user.email,
-          address: "",
-          taxId: "",
-          defaultTerms: "",
-          defaultValidityDays: config.defaultValidityDays,
-          logoDataUrl: null,
-        }}
-      />
+      <p className="muted">Aparecen en tus presupuestos. Podés cambiarlos cuando quieras.</p>
+      <section className="panel">
+        <BusinessForm
+          onboarding
+          values={{
+            name: "",
+            phone: "",
+            email: user.email,
+            address: "",
+            taxId: "",
+            defaultTerms: "",
+            defaultValidityDays: config.defaultValidityDays,
+            logoDataUrl: null,
+          }}
+        />
+      </section>
     </main>
   );
 }

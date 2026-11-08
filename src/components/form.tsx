@@ -3,23 +3,30 @@
 import { createContext, startTransition, use, useActionState, type ReactNode } from "react";
 import type { FormState } from "@/server/forms";
 
-const FormStateContext = createContext<FormState>({});
+const FormStateContext = createContext<FormState & { pending?: boolean }>({});
 
-/** A form bound to a server action; shows the action's errors next to each field. */
+/**
+ * A form bound to a server action; shows the action's errors next to each field.
+ * Without `submitLabel`, place <FormFooter> yourself (the quote editor puts it in its side panel).
+ */
 export function ActionForm({
   action,
   submitLabel,
   children,
   okMessage,
+  className = "stack",
+  submitClassName,
 }: {
   action: (state: FormState, form: FormData) => Promise<FormState>;
-  submitLabel: string;
+  submitLabel?: string;
   children: ReactNode;
   okMessage?: string;
+  className?: string;
+  submitClassName?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   return (
-    <FormStateContext value={state}>
+    <FormStateContext value={{ ...state, pending }}>
       <form
         action={formAction}
         // Submitting by hand keeps what the user typed when the action returns errors;
@@ -29,16 +36,45 @@ export function ActionForm({
           const data = new FormData(e.currentTarget);
           startTransition(() => formAction(data));
         }}
-        className="stack"
+        className={className}
       >
         {children}
-        {state.error && <p role="alert">{state.error}</p>}
-        {state.ok && okMessage && <p role="status">{okMessage}</p>}
-        <button type="submit" disabled={pending}>
-          {submitLabel}
-        </button>
+        {submitLabel && (
+          <FormFooter submitLabel={submitLabel} okMessage={okMessage} className={submitClassName} />
+        )}
       </form>
     </FormStateContext>
+  );
+}
+
+export function FormFooter({
+  submitLabel,
+  okMessage,
+  className,
+}: {
+  submitLabel: string;
+  okMessage?: string;
+  className?: string;
+}) {
+  const { error, ok, pending } = use(FormStateContext);
+  return (
+    <>
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
+      {ok && okMessage && (
+        <p className="notice notice-green" role="status">
+          {okMessage}
+        </p>
+      )}
+      <div>
+        <button type="submit" disabled={pending} aria-busy={pending} className={className}>
+          {submitLabel}
+        </button>
+      </div>
+    </>
   );
 }
 

@@ -33,7 +33,7 @@ export function CatalogForm({
   submitLabel: string;
 }) {
   return (
-    <ActionForm action={action} submitLabel={submitLabel}>
+    <ActionForm action={action} submitLabel={submitLabel} className="panel stack">
       <Input label="Nombre" name="name" defaultValue={values.name} required maxLength={120} />
       <Textarea
         label="Descripción"
@@ -86,9 +86,9 @@ export function CatalogForm({
           <option key={c} value={c} />
         ))}
       </datalist>
-      <label>
-        <input type="checkbox" name="active" defaultChecked={values.active} /> Activo (aparece al
-        armar presupuestos)
+      <label className="check">
+        <input type="checkbox" name="active" defaultChecked={values.active} />
+        Activo: aparece al armar presupuestos
       </label>
     </ActionForm>
   );
