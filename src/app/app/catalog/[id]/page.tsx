@@ -13,7 +13,7 @@ export default async function EditCatalogItem({ params }: PageProps<"/app/catalo
   if (!item) notFound();
 
   return (
-    <div className="stack">
+    <div className="stack-lg form-page">
       <h1>{item.name}</h1>
       <CatalogForm
         action={saveCatalogItem.bind(null, item.id)}
@@ -22,7 +22,9 @@ export default async function EditCatalogItem({ params }: PageProps<"/app/catalo
         values={{ ...item, priceCents: toFixed2(item.priceCents) }}
       />
       <form action={removeCatalogItem.bind(null, item.id)}>
-        <button type="submit">Borrar ítem</button>
+        <button type="submit" className="btn-danger">
+          Borrar ítem
+        </button>
       </form>
       <p>
         <small>Los presupuestos ya armados conservan sus precios.</small>

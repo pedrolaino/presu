@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Política de privacidad · Presu" };
 
 export default function Privacy() {
   return (
-    <main className="page stack prose">
+    <main className="reading stack prose">
       <h1>Política de privacidad</h1>
       <p>
         <small>Última actualización: noviembre de 2026</small>

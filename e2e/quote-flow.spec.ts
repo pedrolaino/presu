@@ -23,11 +23,12 @@ test("owner creates and shares a quote, the client accepts it, the owner sees th
   await page.getByRole("button", { name: "Crear presupuesto" }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Sofía Benítez");
-  await expect(page.getByText("Estado: Borrador")).toBeVisible();
-  const url = await page.locator("code").innerText();
+  const status = page.locator(".page-head .status");
+  await expect(status).toHaveText("Borrador");
+  const url = await page.getByLabel("Link para el cliente").inputValue();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("button", { name: "Copiar link" }).click();
-  await expect(page.getByText("Estado: Enviado")).toBeVisible();
+  await expect(status).toHaveText("Enviado");
 
   // The client opens the link in a separate browser context, without an account.
   const client = await newVisitor(browser);
@@ -36,16 +37,16 @@ test("owner creates and shares a quote, the client accepts it, the owner sees th
   await expect(clientPage.getByRole("heading", { level: 1 })).toContainText("Sofía Benítez");
   await expect(clientPage.getByText("$ 134.310,00").first()).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Estado: Visto")).toBeVisible();
+  await expect(status).toHaveText("Visto");
 
   await clientPage.getByLabel("Tu nombre").fill("Sofía Benítez");
   await clientPage.getByRole("button", { name: "Aceptar presupuesto" }).click();
-  await expect(clientPage.getByText(/Aceptado por Sofía Benítez/)).toBeVisible();
+  await expect(clientPage.locator(".signature")).toContainText("Sofía Benítez");
   await client.close();
 
   await page.reload();
-  await expect(page.getByText("Estado: Aceptado")).toBeVisible();
-  const timeline = page.locator(".timeline");
+  await expect(status).toHaveText("Aceptado");
+  const timeline = page.getByRole("region", { name: "Historial" });
   for (const event of ["Creado", "Enviado", "Visto por el cliente", "Aceptado"]) {
     await expect(timeline).toContainText(event);
   }
@@ -58,11 +59,11 @@ test("editing a sent quote creates a version the client sees once it is sent", a
 }) => {
   await startGuest(page);
   await page
-    .getByRole("row", { name: /Consorcio.*Enviado/ })
-    .getByRole("link")
+    .locator("a.row")
+    .filter({ hasText: "Consorcio" })
+    .filter({ hasText: "Enviado" })
     .click();
-  await expect(page.getByRole("heading", { name: /Presupuesto #/ })).toBeVisible();
-  const url = await page.locator("code").innerText();
+  const url = await page.getByLabel("Link para el cliente").inputValue();
 
   await page.getByRole("link", { name: "Editar" }).click();
   await expect(page.getByRole("heading", { name: /Editar presupuesto/ })).toBeVisible();
@@ -74,11 +75,11 @@ test("editing a sent quote creates a version the client sees once it is sent", a
   const client = await newVisitor(browser);
   const clientPage = await client.newPage();
   await clientPage.goto(url);
-  await expect(clientPage.getByRole("cell", { name: /^1 unidad$/ })).toBeVisible();
+  await expect(clientPage.locator(".item-meta").first()).toContainText("1 unidad");
 
   await page.getByRole("button", { name: "Marcar como enviado" }).click();
   await expect(page.getByRole("button", { name: "Marcar como enviado" })).toHaveCount(0);
   await clientPage.reload();
-  await expect(clientPage.getByRole("cell", { name: /^2 unidad$/ })).toBeVisible();
+  await expect(clientPage.locator(".item-meta").first()).toContainText("2 unidad");
   await client.close();
 });

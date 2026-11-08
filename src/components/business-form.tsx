@@ -78,8 +78,9 @@ export function BusinessForm({
         hint="PNG, JPG o WebP, hasta 200 KB."
       />
       {values.logoDataUrl && (
-        <label>
-          <input type="checkbox" name="removeLogo" /> Sacar el logo
+        <label className="check">
+          <input type="checkbox" name="removeLogo" />
+          Sacar el logo
         </label>
       )}
       <Textarea

@@ -19,11 +19,15 @@ export default async function IncreasePrices({ searchParams }: PageProps<"/app/c
   const asked = params.percent !== undefined;
 
   return (
-    <div className="stack">
-      <h1>Aumentar precios</h1>
-      <p>Cambia los precios del catálogo. Los presupuestos que ya armaste no se tocan.</p>
+    <div className="stack-lg form-page">
+      <div className="stack">
+        <h1>Aumentar precios</h1>
+        <p className="muted">
+          Cambia los precios del catálogo. Los presupuestos que ya armaste no se tocan.
+        </p>
+      </div>
 
-      <form className="stack">
+      <form className="panel stack">
         <div className="field">
           <label htmlFor="percent">Porcentaje</label>
           <input
@@ -54,48 +58,56 @@ export default async function IncreasePrices({ searchParams }: PageProps<"/app/c
         <fieldset>
           <legend>O elegí los ítems</legend>
           {items.map((i) => (
-            <label key={i.id} style={{ display: "block" }}>
-              <input type="checkbox" name="id" value={i.id} defaultChecked={ids.includes(i.id)} />{" "}
+            <label key={i.id} className="check">
+              <input type="checkbox" name="id" value={i.id} defaultChecked={ids.includes(i.id)} />
               {i.name}
             </label>
           ))}
         </fieldset>
-        <button type="submit">Ver vista previa</button>
+        <div>
+          <button type="submit" className="btn-secondary">
+            Ver vista previa
+          </button>
+        </div>
       </form>
 
       {asked && !request && (
-        <p role="alert">Poné un porcentaje y elegí una categoría o algunos ítems.</p>
+        <p className="alert" role="alert">
+          Poné un porcentaje y elegí una categoría o algunos ítems.
+        </p>
       )}
 
       {request && preview && (
         <section className="stack" aria-labelledby="preview-title">
-          <h2 id="preview-title">Vista previa ({formatPercent(request.bps)})</h2>
+          <h2 id="preview-title">Vista previa con {formatPercent(request.bps)}</h2>
           {preview.length === 0 ? (
             <p>No hay ítems en esa selección.</p>
           ) : (
             <>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Ítem</th>
-                    <th scope="col" className="num">
-                      Antes
-                    </th>
-                    <th scope="col" className="num">
-                      Después
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.name}</td>
-                      <td className="num">{formatMoney(p.beforeCents, p.currency)}</td>
-                      <td className="num">{formatMoney(p.afterCents, p.currency)}</td>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Ítem</th>
+                      <th scope="col" className="num">
+                        Antes
+                      </th>
+                      <th scope="col" className="num">
+                        Después
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {preview.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.name}</td>
+                        <td className="num">{formatMoney(p.beforeCents, p.currency)}</td>
+                        <td className="num">{formatMoney(p.afterCents, p.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <form action={applyIncrease}>
                 <input type="hidden" name="percent" value={String(params.percent)} />
                 {"category" in request.selection ? (

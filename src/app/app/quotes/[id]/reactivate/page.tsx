@@ -25,10 +25,10 @@ export default async function Reactivate({ params }: PageProps<"/app/quotes/[id]
   );
 
   return (
-    <div className="stack">
+    <div className="stack-lg form-page">
       <h1>Reactivar presupuesto {formatQuoteNumber(detail.quote.number)}</h1>
       {!expired ? (
-        <p role="alert">Este presupuesto no está vencido.</p>
+        <p className="notice">Este presupuesto no está vencido.</p>
       ) : (
         <>
           <p>
@@ -38,29 +38,31 @@ export default async function Reactivate({ params }: PageProps<"/app/quotes/[id]
           {preview.changes.length === 0 ? (
             <p>Los precios no cambiaron.</p>
           ) : (
-            <table>
-              <caption>Cambios de precio</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Ítem</th>
-                  <th scope="col" className="num">
-                    Antes
-                  </th>
-                  <th scope="col" className="num">
-                    Ahora
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.changes.map((c, i) => (
-                  <tr key={i}>
-                    <td>{c.name}</td>
-                    <td className="num">{money(c.beforeCents)}</td>
-                    <td className="num">{money(c.afterCents)}</td>
+            <div className="table-wrap">
+              <table>
+                <caption className="visually-hidden">Cambios de precio</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Ítem</th>
+                    <th scope="col" className="num">
+                      Antes
+                    </th>
+                    <th scope="col" className="num">
+                      Ahora
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {preview.changes.map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.name}</td>
+                      <td className="num">{money(c.beforeCents)}</td>
+                      <td className="num">{money(c.afterCents)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <p>
             Total: {money(preview.live.totalCents)} → <strong>{money(preview.totalCents)}</strong>

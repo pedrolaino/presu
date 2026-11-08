@@ -12,11 +12,13 @@ export default async function EditClient({ params }: PageProps<"/app/clients/[id
   if (!client) notFound();
 
   return (
-    <div className="stack">
+    <div className="stack-lg form-page">
       <h1>{client.name}</h1>
       <ClientForm action={saveClient.bind(null, client.id)} values={client} submitLabel="Guardar" />
       <form action={removeClient.bind(null, client.id)}>
-        <button type="submit">Borrar cliente</button>
+        <button type="submit" className="btn-danger">
+          Borrar cliente
+        </button>
       </form>
       <p>
         <small>Los presupuestos ya armados conservan los datos del cliente.</small>

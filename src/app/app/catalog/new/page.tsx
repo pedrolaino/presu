@@ -7,7 +7,7 @@ import { requireBusiness } from "@/server/session";
 export default async function NewCatalogItem() {
   const { business } = await requireBusiness();
   return (
-    <div className="stack">
+    <div className="stack-lg form-page">
       <h1>Nuevo ítem</h1>
       <CatalogForm
         action={saveCatalogItem.bind(null, null)}

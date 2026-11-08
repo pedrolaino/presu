@@ -21,7 +21,7 @@ export default async function EditQuote({ params }: PageProps<"/app/quotes/[id]/
     <div className="stack">
       <h1>Editar presupuesto {formatQuoteNumber(quote.number)}</h1>
       {latest.sentAt && (
-        <p role="note">
+        <p className="notice notice-clay" role="note">
           Este presupuesto ya se envió. Al guardar se crea la versión {latest.version + 1}; el
           cliente la ve cuando la envíes.
         </p>

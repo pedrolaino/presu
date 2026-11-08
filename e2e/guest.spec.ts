@@ -3,14 +3,14 @@ import { expect, newVisitor, startGuest, test } from "./fixtures";
 test("guest account starts with sample quotes in every state", async ({ page }) => {
   await startGuest(page);
   await expect(page.getByRole("note")).toContainText("cuenta de prueba");
-  const rows = page.getByRole("row");
+  const rows = page.locator("a.row");
   for (const status of ["Borrador", "Enviado", "Visto", "Aceptado", "Rechazado", "Vencido"]) {
     await expect(rows.filter({ hasText: status }).first()).toBeVisible();
   }
 
   await page.getByLabel("Estado").selectOption("expired");
   await page.getByRole("button", { name: "Filtrar" }).click();
-  await expect(page.getByRole("row")).toHaveCount(2); // header + one expired quote
+  await expect(page.locator("a.row")).toHaveCount(1);
 
   await page.getByRole("link", { name: "Métricas" }).click();
   await expect(page.getByText("Tasa de aceptación")).toBeVisible();
@@ -19,11 +19,8 @@ test("guest account starts with sample quotes in every state", async ({ page }) 
 
 test("an expired quote cannot be accepted from its link", async ({ page, browser }) => {
   await startGuest(page);
-  await page
-    .getByRole("row", { name: /Vencido/ })
-    .getByRole("link")
-    .click();
-  const url = await page.locator("code").innerText();
+  await page.locator("a.row", { hasText: "Vencido" }).click();
+  const url = await page.getByLabel("Link para el cliente").inputValue();
 
   const client = await newVisitor(browser);
   const clientPage = await client.newPage();

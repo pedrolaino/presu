@@ -20,7 +20,7 @@ export function ClientForm({
   submitLabel: string;
 }) {
   return (
-    <ActionForm action={action} submitLabel={submitLabel}>
+    <ActionForm action={action} submitLabel={submitLabel} className="panel stack">
       <Input label="Nombre" name="name" defaultValue={values?.name} required maxLength={120} />
       <Input label="Email" name="email" type="email" defaultValue={values?.email} maxLength={120} />
       <Input label="Teléfono" name="phone" type="tel" defaultValue={values?.phone} maxLength={40} />

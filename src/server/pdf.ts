@@ -1,3 +1,4 @@
+import path from "node:path";
 import PDFDocument from "pdfkit";
 import type { businesses, quoteVersions } from "@/db/schema";
 import { todayInArgentina } from "@/domain/dates";
@@ -10,9 +11,12 @@ type Business = typeof businesses.$inferSelect;
 type Version = typeof quoteVersions.$inferSelect;
 
 const MARGIN = 48;
-const INK = "#1f2328";
-const MUTED = "#59636e";
-const LINE = "#d1d9e0";
+// Same palette and typefaces as the app (see globals.css).
+const INK = "#22271f";
+const MUTED = "#5c6156";
+const LINE = "#e6ddce";
+const GREEN = "#1f5135";
+const FONTS = path.join(process.cwd(), "src/server/fonts");
 
 // The built-in PDF fonts only cover Latin-1; swap the few characters outside it.
 const latin1 = (s: string) =>
@@ -32,6 +36,9 @@ export function renderQuotePdf(
     margin: MARGIN,
     info: { Title: `Presupuesto ${formatQuoteNumber(number)}` },
   });
+  doc.registerFont("Body", path.join(FONTS, "Figtree-Regular.ttf"));
+  doc.registerFont("Body-Bold", path.join(FONTS, "Figtree-SemiBold.ttf"));
+  doc.registerFont("Display", path.join(FONTS, "Fraunces-SemiBold.ttf"));
   const chunks: Buffer[] = [];
   doc.on("data", (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) =>
@@ -49,9 +56,9 @@ export function renderQuotePdf(
     doc.image(business.logo, MARGIN, top, { fit: [72, 72] });
     left += 84;
   }
-  doc.font("Helvetica-Bold").fontSize(14).fillColor(INK);
+  doc.font("Body-Bold").fontSize(14).fillColor(INK);
   doc.text(latin1(business.name), left, top, { width: width / 2 });
-  doc.font("Helvetica").fontSize(9).fillColor(MUTED);
+  doc.font("Body").fontSize(9).fillColor(MUTED);
   for (const line of [
     business.address,
     business.phone,
@@ -62,9 +69,9 @@ export function renderQuotePdf(
   }
   const headerBottom = Math.max(doc.y, top + (business.logo ? 72 : 0));
 
-  doc.font("Helvetica-Bold").fontSize(18).fillColor(INK);
+  doc.font("Display").fontSize(20).fillColor(INK);
   doc.text(`Presupuesto ${formatQuoteNumber(number)}`, MARGIN, top, { width, align: "right" });
-  doc.font("Helvetica").fontSize(9).fillColor(MUTED);
+  doc.font("Body").fontSize(9).fillColor(MUTED);
   doc.text(`Versión ${version.version}`, { width, align: "right" });
   doc.text(`Fecha: ${formatDate(todayInArgentina(version.sentAt ?? version.createdAt))}`, {
     width,
@@ -74,11 +81,11 @@ export function renderQuotePdf(
 
   // Client
   doc.y = Math.max(doc.y, headerBottom) + 24;
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(MUTED);
-  doc.text("PARA", MARGIN);
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(INK);
+  doc.font("Body-Bold").fontSize(9).fillColor(MUTED);
+  doc.text("Para", MARGIN);
+  doc.font("Body-Bold").fontSize(11).fillColor(INK);
   text(version.client.name);
-  doc.font("Helvetica").fontSize(9).fillColor(MUTED);
+  doc.font("Body").fontSize(9).fillColor(MUTED);
   for (const line of [version.client.address, version.client.phone, version.client.email])
     if (line) text(line);
 
@@ -110,7 +117,7 @@ export function renderQuotePdf(
     let x = MARGIN;
     let bottom = y;
     doc
-      .font(bold ? "Helvetica-Bold" : "Helvetica")
+      .font(bold ? "Body-Bold" : "Body")
       .fontSize(9)
       .fillColor(bold ? MUTED : INK);
     cells.forEach((cell, i) => {
@@ -150,9 +157,9 @@ export function renderQuotePdf(
     if (doc.y > doc.page.height - MARGIN - 40) doc.addPage();
     const y = doc.y;
     doc
-      .font(bold ? "Helvetica-Bold" : "Helvetica")
-      .fontSize(bold ? 12 : 10)
-      .fillColor(INK);
+      .font(bold ? "Display" : "Body")
+      .fontSize(bold ? 16 : 10)
+      .fillColor(bold ? GREEN : INK);
     doc.text(latin1(label), MARGIN + width * 0.5, y, { width: width * 0.3, align: "right" });
     doc.text(latin1(value), MARGIN + width * 0.8, y, { width: width * 0.2, align: "right" });
     doc.y += 4;
@@ -167,7 +174,7 @@ export function renderQuotePdf(
     totalLine(`IVA ${formatPercent(g.rateBps)}`, money(g.vatCents));
   totalLine("Total", money(totals.totalCents), true);
   if (version.vatMode === "included") {
-    doc.font("Helvetica").fontSize(9).fillColor(MUTED);
+    doc.font("Body").fontSize(9).fillColor(MUTED);
     doc.text("Los precios incluyen IVA.", MARGIN, doc.y, { width, align: "right" });
   }
 
@@ -177,9 +184,9 @@ export function renderQuotePdf(
   ] as const) {
     if (!body) continue;
     doc.y += 16;
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(INK);
+    doc.font("Body-Bold").fontSize(10).fillColor(INK);
     doc.text(title, MARGIN, doc.y, { width });
-    doc.font("Helvetica").fontSize(9).fillColor(INK);
+    doc.font("Body").fontSize(9).fillColor(INK);
     text(body, { width });
   }
 
