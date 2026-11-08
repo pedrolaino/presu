@@ -1,9 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
 import { saveBusiness } from "@/server/business";
-import type { FormState } from "@/server/forms";
-import { Field } from "./field";
+import { ActionForm, Input, Textarea } from "./form";
 
 export interface BusinessValues {
   name: string;
@@ -23,69 +21,83 @@ export function BusinessForm({
   values: BusinessValues;
   onboarding: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(saveBusiness, {});
-  const err = (name: string) => state.fieldErrors?.[name];
-  const input = (
-    name: keyof BusinessValues,
-    label: string,
-    props: Record<string, unknown> = {},
-  ) => (
-    <Field label={label} name={name} error={err(name)}>
-      <input
-        id={name}
-        name={name}
-        defaultValue={String(values[name] ?? "")}
-        aria-invalid={!!err(name)}
-        aria-describedby={err(name) ? `${name}-error` : undefined}
-        {...props}
-      />
-    </Field>
-  );
-
   return (
-    <form action={action} className="stack">
+    <ActionForm
+      action={saveBusiness}
+      submitLabel={onboarding ? "Empezar" : "Guardar"}
+      okMessage="Datos guardados."
+    >
       {onboarding && <input type="hidden" name="onboarding" value="1" />}
-      {input("name", "Nombre del negocio", {
-        required: true,
-        maxLength: 100,
-        autoComplete: "organization",
-      })}
-      {input("phone", "Teléfono", { type: "tel", maxLength: 40, autoComplete: "tel" })}
-      {input("email", "Email", { type: "email", maxLength: 120, autoComplete: "email" })}
-      {input("address", "Dirección", { maxLength: 200, autoComplete: "street-address" })}
-      {input("taxId", "CUIT (opcional, solo se muestra)", { maxLength: 20, inputMode: "numeric" })}
-      <Field label="Logo (PNG, JPG o WebP, hasta 200 KB)" name="logo" error={err("logo")}>
-        {values.logoDataUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={values.logoDataUrl} alt="Logo actual" width={96} />
-        )}
-        <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" />
-        {values.logoDataUrl && (
-          <label>
-            <input type="checkbox" name="removeLogo" /> Sacar el logo
-          </label>
-        )}
-      </Field>
-      <Field label="Condiciones por defecto" name="defaultTerms" error={err("defaultTerms")}>
-        <textarea
-          id="defaultTerms"
-          name="defaultTerms"
-          rows={4}
-          maxLength={2000}
-          defaultValue={values.defaultTerms}
-        />
-      </Field>
-      {input("defaultValidityDays", "Días de validez por defecto", {
-        type: "number",
-        min: 1,
-        max: 365,
-        required: true,
-      })}
-      {state.error && <p role="alert">{state.error}</p>}
-      {state.ok && <p role="status">Datos guardados.</p>}
-      <button type="submit" disabled={pending}>
-        {onboarding ? "Empezar" : "Guardar"}
-      </button>
-    </form>
+      <Input
+        label="Nombre del negocio"
+        name="name"
+        defaultValue={values.name}
+        required
+        maxLength={100}
+        autoComplete="organization"
+      />
+      <Input
+        label="Teléfono"
+        name="phone"
+        type="tel"
+        defaultValue={values.phone}
+        maxLength={40}
+        autoComplete="tel"
+      />
+      <Input
+        label="Email"
+        name="email"
+        type="email"
+        defaultValue={values.email}
+        maxLength={120}
+        autoComplete="email"
+      />
+      <Input
+        label="Dirección"
+        name="address"
+        defaultValue={values.address}
+        maxLength={200}
+        autoComplete="street-address"
+      />
+      <Input
+        label="CUIT (opcional, solo se muestra)"
+        name="taxId"
+        defaultValue={values.taxId}
+        maxLength={20}
+        inputMode="numeric"
+      />
+      {values.logoDataUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={values.logoDataUrl} alt="Logo actual del negocio" width={96} />
+      )}
+      <Input
+        label="Logo"
+        name="logo"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        hint="PNG, JPG o WebP, hasta 200 KB."
+      />
+      {values.logoDataUrl && (
+        <label>
+          <input type="checkbox" name="removeLogo" /> Sacar el logo
+        </label>
+      )}
+      <Textarea
+        label="Condiciones por defecto"
+        name="defaultTerms"
+        rows={4}
+        maxLength={2000}
+        defaultValue={values.defaultTerms}
+      />
+      <Input
+        label="Días de validez por defecto"
+        name="defaultValidityDays"
+        type="number"
+        min={1}
+        max={365}
+        required
+        defaultValue={values.defaultValidityDays}
+      />
+    </ActionForm>
   );
 }
