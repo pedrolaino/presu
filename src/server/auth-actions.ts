@@ -1,12 +1,13 @@
 "use server";
 
-import { and, eq, lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { config } from "@/config";
 import { db } from "@/db";
 import { user } from "@/db/schema";
 import { auth } from "./auth";
+import { purgeExpired } from "./cleanup";
 import { seedDemo } from "./demo";
 import { allowRequest } from "./rate-limit";
 import { clientIp, getSession } from "./session";
@@ -33,9 +34,8 @@ export async function startDemo() {
     (await allowRequest(db, "guest:all", config.rateLimits.guestGlobal, now));
   if (!allowed) redirect("/?demo=limit");
 
-  // No cron: expired guest accounts are removed whenever a new one is created.
-  const cutoff = new Date(now.getTime() - config.guestAccountTtlHours * 3600_000);
-  await db.delete(user).where(and(eq(user.isAnonymous, true), lt(user.createdAt, cutoff)));
+  // A daily cron also runs this, so guests expire even when nobody starts a new demo.
+  await purgeExpired(db, now);
 
   const res = await auth.api.signInAnonymous({ headers: await headers() });
   if (!res) throw new Error("Could not create guest account");

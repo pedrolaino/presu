@@ -20,6 +20,7 @@ import {
   liveVersion,
   planEdit,
   repriceFromCatalog,
+  type Currency,
   type VersionItem,
 } from "@/domain/versions";
 import { parseFixed2 } from "@/lib/numbers";
@@ -120,20 +121,26 @@ async function resolveClient(tx: Tx, businessId: string, input: QuoteInput["clie
   return row;
 }
 
-/** Drops links to catalog items that are not this business's. */
-async function ownItems(tx: Tx, businessId: string, items: VersionItem[]) {
+/** Drops links to catalog items that are not this business's or are priced in another currency. */
+async function ownItems(tx: Tx, businessId: string, items: VersionItem[], currency: Currency) {
   const ids = items.flatMap((i) => (i.catalogItemId ? [i.catalogItemId] : []));
   if (ids.length === 0) return items;
-  const owned = new Set(
+  const linkable = new Set(
     (
       await tx
         .select({ id: catalogItems.id })
         .from(catalogItems)
-        .where(and(eq(catalogItems.businessId, businessId), inArray(catalogItems.id, ids)))
+        .where(
+          and(
+            eq(catalogItems.businessId, businessId),
+            eq(catalogItems.currency, currency),
+            inArray(catalogItems.id, ids),
+          ),
+        )
     ).map((r) => r.id),
   );
   return items.map((i) =>
-    i.catalogItemId && !owned.has(i.catalogItemId) ? { ...i, catalogItemId: null } : i,
+    i.catalogItemId && !linkable.has(i.catalogItemId) ? { ...i, catalogItemId: null } : i,
   );
 }
 
@@ -208,7 +215,7 @@ export async function createQuote(
 ) {
   return db.transaction(async (tx) => {
     const client = await resolveClient(tx, businessId, input.client);
-    const items = await ownItems(tx, businessId, input.items);
+    const items = await ownItems(tx, businessId, input.items, input.currency);
     const values = versionValues(input, snapshot(client), items);
     const number = await nextNumber(tx, businessId);
     const [quote] = await tx
@@ -244,7 +251,7 @@ export async function updateQuote(
     const values = versionValues(
       input,
       snapshot(client),
-      await ownItems(tx, businessId, input.items),
+      await ownItems(tx, businessId, input.items, input.currency),
     );
     await tx.update(quotes).set({ clientId: client.id }).where(eq(quotes.id, quote.id));
     if (plan === "update") {
@@ -330,32 +337,52 @@ export async function duplicateQuote(
   });
 }
 
-/** What reactivating an expired quote would change: current catalog prices and a new validity. */
-export async function previewReactivation(db: Db, businessId: string, quoteId: string, now: Date) {
-  const detail = await getQuote(db, businessId, quoteId);
-  if (!detail) return null;
-  const live = liveVersion(detail.versions)!;
-  const [business] = await db.select().from(businesses).where(eq(businesses.id, businessId));
-  const catalog = await db
+/** Current catalog prices and a new validity for `live`, read through `ex` (the db or a transaction). */
+async function repriceVersion(
+  ex: Db | Tx,
+  businessId: string,
+  live: typeof quoteVersions.$inferSelect,
+  now: Date,
+  lockCatalog = false,
+) {
+  const [business] = await ex.select().from(businesses).where(eq(businesses.id, businessId));
+  const catalogQuery = ex
     .select()
     .from(catalogItems)
     .where(eq(catalogItems.businessId, businessId));
+  // Inside the reactivation, keep a bulk increase from changing prices until it commits.
+  const catalog = lockCatalog ? await catalogQuery.for("share") : await catalogQuery;
   const repriced = repriceFromCatalog(live.items, catalog, live.currency);
+  let totalCents: number;
+  try {
+    totalCents = computeTotals({
+      lines: repriced.items,
+      discount: live.discount,
+      vatMode: live.vatMode,
+    }).totalCents;
+  } catch {
+    throw new QuoteError("Los montos son demasiado grandes.");
+  }
   return {
     ...repriced,
     live,
     validUntil: addDays(todayInArgentina(now), business.defaultValidityDays),
-    totalCents: computeTotals({
-      lines: repriced.items,
-      discount: live.discount,
-      vatMode: live.vatMode,
-    }).totalCents,
+    totalCents,
   };
 }
 
+/** What reactivating an expired quote would change: current catalog prices and a new validity. */
+export async function previewReactivation(db: Db, businessId: string, quoteId: string, now: Date) {
+  const detail = await getQuote(db, businessId, quoteId);
+  if (!detail) return null;
+  return repriceVersion(db, businessId, liveVersion(detail.versions)!, now);
+}
+
+/**
+ * Everything is read again after locking the quote, so the new version is built from the version
+ * and prices that are current when it commits, not from what the preview saw.
+ */
 export async function reactivateQuote(db: Db, businessId: string, quoteId: string, now: Date) {
-  const preview = await previewReactivation(db, businessId, quoteId, now);
-  if (!preview) throw new QuoteError("No encontramos ese presupuesto.");
   return db.transaction(async (tx) => {
     const { quote, versions, latest } = await lockQuote(tx, businessId, quoteId);
     const live = liveVersion(versions)!;
@@ -364,14 +391,15 @@ export async function reactivateQuote(db: Db, businessId: string, quoteId: strin
       "reactivate",
       now,
     );
+    const next = await repriceVersion(tx, businessId, live, now, true);
     const version = latest.version + 1;
     await tx.insert(quoteVersions).values({
       ...contentOf(live),
       quoteId: quote.id,
       version,
-      items: preview.items,
-      totalCents: preview.totalCents,
-      validUntil: preview.validUntil,
+      items: next.items,
+      totalCents: next.totalCents,
+      validUntil: next.validUntil,
       sentAt: now,
       createdAt: now,
     });
@@ -416,7 +444,10 @@ export interface QuoteListRow {
   createdAt: Date;
 }
 
-/** One row per quote with its live version; status and search filters apply after `expired` is derived. */
+/**
+ * One row per quote with its live version. The live version is picked first and the filters apply
+ * to it, so a search never matches an older version's client.
+ */
 export async function listQuotes(
   db: Db,
   businessId: string,
@@ -424,32 +455,39 @@ export async function listQuotes(
   filter: { status?: DisplayStatus; search?: string } = {},
 ): Promise<QuoteListRow[]> {
   const search = filter.search?.trim();
-  const rows = await db
+  const live = db
     .selectDistinctOn([quoteVersions.quoteId], {
-      id: quotes.id,
-      number: quotes.number,
-      status: quotes.status,
-      firstSentAt: quotes.firstSentAt,
-      respondedAt: quotes.respondedAt,
-      createdAt: quotes.createdAt,
-      clientName: sql<string>`${quoteVersions.client}->>'name'`,
+      quoteId: quoteVersions.quoteId,
+      clientName: sql<string>`${quoteVersions.client}->>'name'`.as("client_name"),
       currency: quoteVersions.currency,
       totalCents: quoteVersions.totalCents,
       validUntil: quoteVersions.validUntil,
     })
     .from(quoteVersions)
     .innerJoin(quotes, eq(quotes.id, quoteVersions.quoteId))
-    .where(
-      and(
-        eq(quotes.businessId, businessId),
-        search ? sql`${quoteVersions.client}->>'name' ilike ${likePattern(search)}` : undefined,
-      ),
-    )
+    .where(eq(quotes.businessId, businessId))
     .orderBy(
       quoteVersions.quoteId,
       sql`${quoteVersions.sentAt} is null`,
       desc(quoteVersions.version),
-    );
+    )
+    .as("live");
+  const rows = await db
+    .select({
+      id: quotes.id,
+      number: quotes.number,
+      status: quotes.status,
+      firstSentAt: quotes.firstSentAt,
+      respondedAt: quotes.respondedAt,
+      createdAt: quotes.createdAt,
+      clientName: live.clientName,
+      currency: live.currency,
+      totalCents: live.totalCents,
+      validUntil: live.validUntil,
+    })
+    .from(live)
+    .innerJoin(quotes, eq(quotes.id, live.quoteId))
+    .where(search ? sql`${live.clientName} ilike ${likePattern(search)}` : undefined);
 
   return rows
     .map((r) => ({ ...r, displayStatus: displayStatus(r, now) }))

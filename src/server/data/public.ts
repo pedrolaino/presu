@@ -1,9 +1,10 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { businesses, quoteEvents, quotes, quoteVersions } from "@/db/schema";
+import { businesses, quoteEvents, quotes, quoteVersions, user } from "@/db/schema";
 import { transition } from "@/domain/status";
 import { latestVersion } from "@/domain/versions";
+import { isExpiredGuest } from "../cleanup";
 import { text } from "../forms";
 import { QuoteError } from "./quotes";
 
@@ -12,40 +13,55 @@ import { QuoteError } from "./quotes";
 const isToken = (token: string) => /^[A-Za-z0-9_-]{32}$/.test(token);
 
 /** The quote as the client sees it: the latest sent version. Null for unknown, revoked or unsent links. */
-export async function getPublicQuote(db: Db, token: string) {
+export async function getPublicQuote(db: Db, token: string, now = new Date()) {
   if (!isToken(token)) return null;
   const [row] = await db
-    .select({ quote: quotes, business: businesses })
+    .select({
+      quote: quotes,
+      business: businesses,
+      owner: { isAnonymous: user.isAnonymous, createdAt: user.createdAt },
+    })
     .from(quotes)
     .innerJoin(businesses, eq(businesses.id, quotes.businessId))
+    .innerJoin(user, eq(user.id, businesses.userId))
     .where(eq(quotes.shareToken, token));
-  if (!row) return null;
+  // Links of a guest account stop working with the account, before the purge deletes them.
+  if (!row || isExpiredGuest(row.owner, now)) return null;
   const sent = await db
     .select()
     .from(quoteVersions)
     .where(and(eq(quoteVersions.quoteId, row.quote.id), isNotNull(quoteVersions.sentAt)));
   const version = latestVersion(sent);
-  return version ? { ...row, version } : null;
+  return version ? { quote: row.quote, business: row.business, version } : null;
 }
 
 /** First open by someone other than the owner moves a sent quote to viewed. */
 export async function recordView(db: Db, token: string, viewerUserId: string | null, now: Date) {
-  const found = await getPublicQuote(db, token);
+  // Cheap check first, so most visits do not take a lock.
+  const found = await getPublicQuote(db, token, now);
   if (!found || found.business.userId === viewerUserId || found.quote.status !== "sent") return;
   await db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(quotes)
-      .set({ status: "viewed" })
-      .where(and(eq(quotes.id, found.quote.id), eq(quotes.status, "sent")))
-      .returning({ id: quotes.id });
-    if (updated) {
-      await tx.insert(quoteEvents).values({
-        quoteId: updated.id,
-        type: "viewed",
-        version: found.version.version,
-        createdAt: now,
-      });
-    }
+    // Same lock as editing, sending and answering: the version read below is the one that was
+    // live when the status changed, even if the owner sent a new version meanwhile.
+    const [quote] = await tx
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, found.quote.id), eq(quotes.shareToken, token)))
+      .for("update");
+    if (!quote || quote.status !== "sent") return;
+    const sent = await tx
+      .select()
+      .from(quoteVersions)
+      .where(and(eq(quoteVersions.quoteId, quote.id), isNotNull(quoteVersions.sentAt)));
+    const live = latestVersion(sent);
+    if (!live) return;
+    await tx.update(quotes).set({ status: "viewed" }).where(eq(quotes.id, quote.id));
+    await tx.insert(quoteEvents).values({
+      quoteId: quote.id,
+      type: "viewed",
+      version: live.version,
+      createdAt: now,
+    });
   });
 }
 

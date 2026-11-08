@@ -5,8 +5,15 @@ import { cache } from "react";
 import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { auth } from "./auth";
+import { isExpiredGuest } from "./cleanup";
+import { clientIpFrom } from "./ip";
 
-export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
+/** The current session; guest accounts past their TTL count as signed out until the purge removes them. */
+export const getSession = cache(async () => {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session && isExpiredGuest(session.user, new Date())) return null;
+  return session;
+});
 
 export async function requireUser() {
   const session = await getSession();
@@ -23,7 +30,7 @@ export const requireBusiness = cache(async () => {
 });
 
 export async function clientIp() {
-  return (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientIpFrom(await headers(), !!process.env.VERCEL);
 }
 
 /** Origin the request came in on, to build links that work wherever the app is deployed. */

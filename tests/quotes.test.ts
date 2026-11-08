@@ -275,6 +275,22 @@ describe("listing", () => {
     expect(await listQuotes(db, b.id, now, { search: "espiga" })).toHaveLength(2);
     expect(await listQuotes(db, b.id, now, { search: "%" })).toHaveLength(0);
   });
+
+  it("searches the live version's client, not an older version's", async () => {
+    const b = await createBusiness();
+    const client = (name: string) =>
+      createClient(db, b.id, { name, email: "", phone: "", address: "" });
+    const ana = await client("Ana Pérez");
+    const bruno = await client("Bruno Díaz");
+    const q = await createQuote(db, b.id, input(ana), now, random);
+    await markSent(db, b.id, q.id, now);
+    await updateQuote(db, b.id, q.id, input(bruno), now);
+    await markSent(db, b.id, q.id, now);
+
+    expect(await listQuotes(db, b.id, now, { search: "ana" })).toHaveLength(0);
+    const [row] = await listQuotes(db, b.id, now, { search: "bruno" });
+    expect(row.clientName).toBe("Bruno Díaz");
+  });
 });
 
 describe("isolation", () => {

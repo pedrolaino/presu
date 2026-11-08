@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/db";
+import { PriceTooLargeError } from "@/domain/pricing";
 import {
   applyBulkIncrease,
   catalogInput,
@@ -44,6 +45,13 @@ export async function applyIncrease(form: FormData) {
     ids: form.getAll("id"),
   });
   if (!parsed) redirect("/app/catalog/increase");
-  const count = await applyBulkIncrease(db, business.id, parsed.selection, parsed.bps);
+  let count: number;
+  try {
+    count = await applyBulkIncrease(db, business.id, parsed.selection, parsed.bps);
+  } catch (e) {
+    // Nothing was changed: the whole increase runs in one transaction.
+    if (e instanceof PriceTooLargeError) redirect("/app/catalog/increase?error=too-large");
+    throw e;
+  }
   redirect(`/app/catalog?updated=${count}`);
 }

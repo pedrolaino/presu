@@ -1,7 +1,7 @@
 import { config } from "@/config";
 import { db } from "@/db";
 import { formatQuoteNumber } from "@/domain/share";
-import { latestVersion } from "@/domain/versions";
+import { documentVersion } from "@/domain/versions";
 import { getQuote } from "@/server/data/quotes";
 import { renderQuotePdf } from "@/server/pdf";
 import { allowRequest } from "@/server/rate-limit";
@@ -18,7 +18,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/app/quotes/[id]/pdf
   const detail = await getQuote(db, business.id, id);
   if (!detail) return new Response("No encontrado", { status: 404 });
 
-  const pdf = await renderQuotePdf(business, detail.quote.number, latestVersion(detail.versions)!);
+  const version = documentVersion(detail.versions, detail.quote)!;
+  const pdf = await renderQuotePdf(business, detail.quote.number, version);
   const name = `presupuesto-${formatQuoteNumber(detail.quote.number).slice(1)}.pdf`;
   return new Response(new Uint8Array(pdf), {
     headers: {

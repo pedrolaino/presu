@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { db } from "@/db";
 import { formatQuoteNumber } from "@/domain/share";
 import { displayStatus } from "@/domain/status";
-import { diffItems, latestVersion, liveVersion } from "@/domain/versions";
+import { diffItems, documentVersion, latestVersion, liveVersion } from "@/domain/versions";
 import { eventLabels, formatDateTime } from "@/lib/labels";
 import { formatMoney, formatQuantity } from "@/lib/numbers";
 import { ShareButtons } from "@/components/share-buttons";
@@ -31,6 +31,7 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
   const now = new Date();
   const latest = latestVersion(versions)!;
   const live = liveVersion(versions)!;
+  const shown = documentVersion(versions, quote)!;
   const status = displayStatus({ status: quote.status, validUntil: live.validUntil }, now);
   const editable = quote.status !== "accepted" && quote.status !== "rejected";
   const url = quote.shareToken ? `${await appOrigin()}/p/${quote.shareToken}` : null;
@@ -40,7 +41,7 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
     <>
       <div className="page-head">
         <div>
-          <h1>{latest.client.name}</h1>
+          <h1>{shown.client.name}</h1>
           <div className="actions" style={{ marginTop: "var(--s2)" }}>
             <span className="muted">Presupuesto {number}</span>
             <StatusBadge status={status} />
@@ -102,15 +103,24 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
 
           <section className="stack" aria-labelledby="content-title">
             <h2 id="content-title">
-              Versión {latest.version}
-              {latest.sentAt ? "" : ", sin enviar"}
+              Versión {shown.version}
+              {shown.sentAt ? "" : ", sin enviar"}
+              {quote.status === "accepted" && shown.version === quote.acceptedVersion
+                ? ", la que aceptó el cliente"
+                : ""}
             </h2>
-            {latest.version !== live.version && (
+            {editable && latest.version !== live.version && (
               <p className="notice notice-clay" role="note">
                 El cliente sigue viendo la versión {live.version} hasta que envíes esta.
               </p>
             )}
-            <QuoteDocument version={latest} />
+            {!editable && latest.version !== shown.version && (
+              <p className="notice notice-clay" role="note">
+                La versión {latest.version} quedó sin enviar: el cliente nunca la vio y no forma
+                parte de lo que respondió.
+              </p>
+            )}
+            <QuoteDocument version={shown} />
           </section>
 
           {versions.length > 1 && (
@@ -158,7 +168,7 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
                   quoteId={quote.id}
                   url={url}
                   pdfName={`presupuesto-${number.slice(1)}.pdf`}
-                  message={`¡Hola ${latest.client.name}! Te paso el presupuesto ${number} de ${business.name}. Lo podés ver y aceptar desde acá: ${url}`}
+                  message={`¡Hola ${shown.client.name}! Te paso el presupuesto ${number} de ${business.name}. Lo podés ver y aceptar desde acá: ${url}`}
                 />
                 <form action={revokeLink.bind(null, quote.id)}>
                   <button type="submit" className="btn-secondary">

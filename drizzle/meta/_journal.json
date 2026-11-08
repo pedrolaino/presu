@@ -15,6 +15,13 @@
       "when": 1794114800817,
       "tag": "0001_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794157525788,
+      "tag": "0002_rate_limit_cleanup",
+      "breakpoints": true
     }
   ]
 }

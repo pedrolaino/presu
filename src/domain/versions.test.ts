@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { InvalidTransitionError } from "./status";
 import {
   diffItems,
+  documentVersion,
   latestVersion,
   liveVersion,
   planEdit,
@@ -133,5 +134,24 @@ describe("liveVersion", () => {
 describe("latestVersion", () => {
   it("is the highest version number", () => {
     expect(latestVersion([{ version: 2 }, { version: 5 }, { version: 1 }])?.version).toBe(5);
+  });
+});
+
+describe("documentVersion", () => {
+  const v = (version: number, sent: boolean) => ({ version, sentAt: sent ? new Date() : null });
+  const versions = [v(1, true), v(2, false)];
+
+  it("is the accepted version, not a draft saved before the client accepted", () => {
+    expect(documentVersion(versions, { status: "accepted", acceptedVersion: 1 })?.version).toBe(1);
+  });
+
+  it("is the version the client rejected", () => {
+    expect(documentVersion(versions, { status: "rejected", acceptedVersion: null })?.version).toBe(
+      1,
+    );
+  });
+
+  it("is the latest version, draft included, while the quote is open", () => {
+    expect(documentVersion(versions, { status: "viewed", acceptedVersion: null })?.version).toBe(2);
   });
 });
