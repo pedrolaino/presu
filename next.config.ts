@@ -2,9 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // pdfkit reads its font metrics from disk at runtime.
+  // pdfkit and the PDF fonts are read from disk at runtime.
   serverExternalPackages: ["pdfkit"],
-  outputFileTracingIncludes: { "/**/pdf": ["./node_modules/pdfkit/js/data/**"] },
+  outputFileTracingIncludes: {
+    "/**/pdf": ["./node_modules/pdfkit/js/data/**", "./src/server/fonts/**"],
+  },
   async headers() {
     return [
       {
