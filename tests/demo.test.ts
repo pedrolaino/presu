@@ -8,14 +8,12 @@ import { seedDemo } from "@/server/demo";
 describe("seedDemo", () => {
   it("creates quotes in every state, consistent with today's date", async () => {
     const userId = crypto.randomUUID();
-    await db
-      .insert(user)
-      .values({
-        id: userId,
-        name: "Invitado",
-        email: `${userId}@guest.invalid`,
-        isAnonymous: true,
-      });
+    await db.insert(user).values({
+      id: userId,
+      name: "Invitado",
+      email: `${userId}@guest.invalid`,
+      isAnonymous: true,
+    });
     const now = new Date("2026-11-08T15:00:00Z");
     await seedDemo(db, userId, now);
 
