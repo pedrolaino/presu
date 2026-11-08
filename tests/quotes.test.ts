@@ -66,7 +66,7 @@ describe("numbering", () => {
     const b = await createBusiness();
     const c = await createClient(db, b.id, { name: "Cliente", email: "", phone: "", address: "" });
     const created = await Promise.all(
-      Array.from({ length: 25 }, () => createQuote(db, b.id, input(c), now)),
+      Array.from({ length: 25 }, () => createQuote(db, b.id, input(c), now, random)),
     );
     const numbers = created.map((q) => q.number).sort((x, y) => x - y);
     expect(numbers).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
@@ -75,7 +75,7 @@ describe("numbering", () => {
   it("numbers each business on its own", async () => {
     const b = await createBusiness();
     const c = await createClient(db, b.id, { name: "Cliente", email: "", phone: "", address: "" });
-    expect((await createQuote(db, b.id, input(c), now)).number).toBe(1);
+    expect((await createQuote(db, b.id, input(c), now, random)).number).toBe(1);
   });
 });
 
@@ -88,6 +88,7 @@ describe("creating", () => {
         client: { kind: "new", data: { name: "Diego Romero", email: "", phone: "", address: "" } },
       }),
       now,
+      random,
     );
     const detail = (await getQuote(db, business.id, q.id))!;
     expect(detail.quote.status).toBe("draft");
@@ -118,18 +119,18 @@ describe("creating", () => {
         vatRateBps: "0",
       },
     ];
-    const q = await createQuote(db, business.id, input(clientId, { items }), now);
+    const q = await createQuote(db, business.id, input(clientId, { items }), now, random);
     expect((await getQuote(db, business.id, q.id))!.versions[0].items[0].catalogItemId).toBeNull();
   });
 });
 
 describe("versions", () => {
   it("edits drafts in place and adds a version once sent", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
+    const q = await createQuote(db, business.id, input(clientId), now, random);
     await updateQuote(db, business.id, q.id, input(clientId, { notes: "borrador" }), now);
     expect((await getQuote(db, business.id, q.id))!.versions).toHaveLength(1);
 
-    await markSent(db, business.id, q.id, now, random);
+    await markSent(db, business.id, q.id, now);
     await updateQuote(db, business.id, q.id, input(clientId, { notes: "v2" }), later(1));
     await updateQuote(db, business.id, q.id, input(clientId, { notes: "v2 corregida" }), later(1));
     const detail = (await getQuote(db, business.id, q.id))!;
@@ -141,8 +142,8 @@ describe("versions", () => {
   });
 
   it("never edits an accepted quote", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
-    await markSent(db, business.id, q.id, now, random);
+    const q = await createQuote(db, business.id, input(clientId), now, random);
+    await markSent(db, business.id, q.id, now);
     await db.update(quotes).set({ status: "accepted" }).where(eq(quotes.id, q.id));
     await expect(updateQuote(db, business.id, q.id, input(clientId), now)).rejects.toThrow(
       InvalidTransitionError,
@@ -151,11 +152,12 @@ describe("versions", () => {
 });
 
 describe("sending", () => {
-  it("creates a share link, records the event once and keeps the link on repeat", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
-    const token = await markSent(db, business.id, q.id, now, random);
+  it("records the event once and returns the link created with the quote", async () => {
+    const q = await createQuote(db, business.id, input(clientId), now, random);
+    const token = (await getQuote(db, business.id, q.id))!.quote.shareToken;
     expect(token).toMatch(/^[A-Za-z0-9_-]{32}$/);
-    expect(await markSent(db, business.id, q.id, later(1), random)).toBe(token);
+    expect(await markSent(db, business.id, q.id, now)).toBe(token);
+    expect(await markSent(db, business.id, q.id, later(1))).toBe(token);
     const detail = (await getQuote(db, business.id, q.id))!;
     expect(detail.quote.status).toBe("sent");
     expect(detail.quote.firstSentAt).toEqual(now);
@@ -168,27 +170,28 @@ describe("sending", () => {
       business.id,
       input(clientId, { validUntil: "2026-04-01" }),
       now,
+      random,
     );
-    await expect(markSent(db, business.id, q.id, now, random)).rejects.toThrow(
-      InvalidTransitionError,
-    );
+    await expect(markSent(db, business.id, q.id, now)).rejects.toThrow(InvalidTransitionError);
   });
 
-  it("revokes and regenerates the link", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
-    const token = await markSent(db, business.id, q.id, now, random);
+  it("revokes and regenerates the link; sending does not bring a revoked link back", async () => {
+    const q = await createQuote(db, business.id, input(clientId), now, random);
+    const token = await markSent(db, business.id, q.id, now);
+    expect(await setShareLink(db, business.id, q.id, null)).toBe(true);
+    await updateQuote(db, business.id, q.id, input(clientId, { notes: "v2" }), now);
+    expect(await markSent(db, business.id, q.id, now)).toBeNull();
     expect(await setShareLink(db, business.id, q.id, random)).toBe(true);
     const regenerated = (await getQuote(db, business.id, q.id))!.quote.shareToken;
+    expect(regenerated).toMatch(/^[A-Za-z0-9_-]{32}$/);
     expect(regenerated).not.toBe(token);
-    expect(await setShareLink(db, business.id, q.id, null)).toBe(true);
-    expect((await getQuote(db, business.id, q.id))!.quote.shareToken).toBeNull();
   });
 });
 
 describe("duplicate and reactivate", () => {
   it("duplicates as a new draft with a new number and fresh validity", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
-    const copyId = await duplicateQuote(db, business.id, q.id, later(30));
+    const q = await createQuote(db, business.id, input(clientId), now, random);
+    const copyId = await duplicateQuote(db, business.id, q.id, later(30), random);
     const copy = (await getQuote(db, business.id, copyId))!;
     expect(copy.quote.status).toBe("draft");
     expect(copy.quote.number).toBeGreaterThan(q.number);
@@ -216,8 +219,8 @@ describe("duplicate and reactivate", () => {
         vatRateBps: "2100",
       },
     ];
-    const q = await createQuote(db, business.id, input(clientId, { items }), now);
-    await markSent(db, business.id, q.id, now, random);
+    const q = await createQuote(db, business.id, input(clientId, { items }), now, random);
+    await markSent(db, business.id, q.id, now);
     await expect(reactivateQuote(db, business.id, q.id, now)).rejects.toThrow(
       InvalidTransitionError,
     );
@@ -258,10 +261,10 @@ describe("listing", () => {
       phone: "",
       address: "",
     });
-    const sent = await createQuote(db, b.id, input(c), now);
-    await markSent(db, b.id, sent.id, now, random);
+    const sent = await createQuote(db, b.id, input(c), now, random);
+    await markSent(db, b.id, sent.id, now);
     await updateQuote(db, b.id, sent.id, input(c, { validUntil: "2026-06-30" }), now); // unsent v2
-    await createQuote(db, b.id, input(c), now);
+    await createQuote(db, b.id, input(c), now, random);
 
     const all = await listQuotes(db, b.id, later(20));
     expect(all.map((r) => [r.number, r.displayStatus])).toEqual([
@@ -276,7 +279,7 @@ describe("listing", () => {
 
 describe("isolation", () => {
   it("another business cannot read, edit, send, copy or reactivate a quote", async () => {
-    const q = await createQuote(db, business.id, input(clientId), now);
+    const q = await createQuote(db, business.id, input(clientId), now, random);
     const other = await createBusiness();
     const otherClient = await createClient(db, other.id, {
       name: "X",
@@ -288,12 +291,12 @@ describe("isolation", () => {
     expect(await getQuote(db, other.id, q.id)).toBeNull();
     expect((await listQuotes(db, other.id, now)).map((r) => r.id)).not.toContain(q.id);
     await expect(updateQuote(db, other.id, q.id, input(otherClient), now)).rejects.toThrow();
-    await expect(markSent(db, other.id, q.id, now, random)).rejects.toThrow();
-    await expect(duplicateQuote(db, other.id, q.id, now)).rejects.toThrow();
+    await expect(markSent(db, other.id, q.id, now)).rejects.toThrow();
+    await expect(duplicateQuote(db, other.id, q.id, now, random)).rejects.toThrow();
     await expect(reactivateQuote(db, other.id, q.id, later(30))).rejects.toThrow();
     expect(await setShareLink(db, other.id, q.id, null)).toBe(false);
     // and cannot attach someone else's client to its own quote
-    await expect(createQuote(db, other.id, input(clientId), now)).rejects.toThrow(
+    await expect(createQuote(db, other.id, input(clientId), now, random)).rejects.toThrow(
       "Elegí un cliente.",
     );
     expect((await getQuote(db, business.id, q.id))!.quote.status).toBe("draft");

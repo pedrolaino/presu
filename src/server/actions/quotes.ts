@@ -47,7 +47,7 @@ export async function saveQuote(
   let quoteId = id;
   try {
     if (quoteId) await updateQuote(db, business.id, quoteId, parsed.data, new Date());
-    else quoteId = (await createQuote(db, business.id, parsed.data, new Date())).id;
+    else quoteId = (await createQuote(db, business.id, parsed.data, new Date(), randomBytes)).id;
   } catch (e) {
     return { error: userError(e) };
   }
@@ -58,7 +58,8 @@ export async function saveQuote(
 export async function shareQuote(id: string): Promise<{ url: string } | { error: string }> {
   const { business } = await requireBusiness();
   try {
-    const token = await markSent(db, business.id, id, new Date(), randomBytes);
+    const token = await markSent(db, business.id, id, new Date());
+    if (!token) return { error: "El link está desactivado. Generá uno nuevo para compartirlo." };
     return { url: `${await appOrigin()}/p/${token}` };
   } catch (e) {
     return { error: userError(e) };
@@ -75,7 +76,7 @@ function errorCode(e: unknown) {
 export async function markAsSent(id: string) {
   const { business } = await requireBusiness();
   try {
-    await markSent(db, business.id, id, new Date(), randomBytes);
+    await markSent(db, business.id, id, new Date());
   } catch (e) {
     redirect(`/app/quotes/${id}?error=${errorCode(e)}`);
   }
@@ -84,7 +85,7 @@ export async function markAsSent(id: string) {
 
 export async function duplicate(id: string) {
   const { business } = await requireBusiness();
-  const copyId = await duplicateQuote(db, business.id, id, new Date());
+  const copyId = await duplicateQuote(db, business.id, id, new Date(), randomBytes);
   redirect(`/app/quotes/${copyId}/edit`);
 }
 
