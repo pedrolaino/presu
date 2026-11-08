@@ -59,3 +59,37 @@ td {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pre-line {
+  white-space: pre-line;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  max-width: 24rem;
+  margin-left: auto;
+}
+
+.totals dd {
+  margin: 0;
+}
+
+.item-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
