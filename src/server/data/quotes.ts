@@ -199,7 +199,13 @@ async function nextNumber(tx: Tx, businessId: string) {
   return row.next - 1;
 }
 
-export async function createQuote(db: Db, businessId: string, input: QuoteInput, now: Date) {
+export async function createQuote(
+  db: Db,
+  businessId: string,
+  input: QuoteInput,
+  now: Date,
+  random: RandomBytes,
+) {
   return db.transaction(async (tx) => {
     const client = await resolveClient(tx, businessId, input.client);
     const items = await ownItems(tx, businessId, input.items);
@@ -207,7 +213,13 @@ export async function createQuote(db: Db, businessId: string, input: QuoteInput,
     const number = await nextNumber(tx, businessId);
     const [quote] = await tx
       .insert(quotes)
-      .values({ businessId, number, clientId: client.id, createdAt: now })
+      .values({
+        businessId,
+        number,
+        clientId: client.id,
+        shareToken: newShareToken(random),
+        createdAt: now,
+      })
       .returning({ id: quotes.id, number: quotes.number });
     await tx
       .insert(quoteVersions)
@@ -247,19 +259,12 @@ export async function updateQuote(
 }
 
 /**
- * Sends the latest version if it was not sent yet and makes sure there is a share link.
+ * Sends the latest version if it was not sent yet and returns the share token (null if revoked).
  * Copying the link of a quote that is already out does nothing else.
  */
-export async function markSent(
-  db: Db,
-  businessId: string,
-  quoteId: string,
-  now: Date,
-  random: RandomBytes,
-) {
+export async function markSent(db: Db, businessId: string, quoteId: string, now: Date) {
   return db.transaction(async (tx) => {
     const { quote, latest } = await lockQuote(tx, businessId, quoteId);
-    const shareToken = quote.shareToken ?? newShareToken(random);
     let status = quote.status;
     if (latest.sentAt === null) {
       status = transition({ status: quote.status, validUntil: latest.validUntil }, "send", now);
@@ -270,11 +275,10 @@ export async function markSent(
       .update(quotes)
       .set({
         status,
-        shareToken,
         firstSentAt: quote.firstSentAt ?? (status === "sent" ? now : null),
       })
       .where(eq(quotes.id, quote.id));
-    return shareToken;
+    return quote.shareToken;
   });
 }
 
@@ -288,25 +292,31 @@ export async function setShareLink(
   const rows = await db
     .update(quotes)
     .set({ shareToken: random ? newShareToken(random) : null })
-    .where(
-      and(
-        eq(quotes.businessId, businessId),
-        eq(quotes.id, quoteId),
-        sql`${quotes.shareToken} is not null`,
-      ),
-    )
+    .where(and(eq(quotes.businessId, businessId), eq(quotes.id, quoteId)))
     .returning({ id: quotes.id });
   return rows.length > 0;
 }
 
-export async function duplicateQuote(db: Db, businessId: string, quoteId: string, now: Date) {
+export async function duplicateQuote(
+  db: Db,
+  businessId: string,
+  quoteId: string,
+  now: Date,
+  random: RandomBytes,
+) {
   return db.transaction(async (tx) => {
     const { quote, latest } = await lockQuote(tx, businessId, quoteId);
     const [business] = await tx.select().from(businesses).where(eq(businesses.id, businessId));
     const number = await nextNumber(tx, businessId);
     const [copy] = await tx
       .insert(quotes)
-      .values({ businessId, number, clientId: quote.clientId, createdAt: now })
+      .values({
+        businessId,
+        number,
+        clientId: quote.clientId,
+        shareToken: newShareToken(random),
+        createdAt: now,
+      })
       .returning({ id: quotes.id });
     await tx.insert(quoteVersions).values({
       ...contentOf(latest),

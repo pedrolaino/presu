@@ -93,3 +93,7 @@ td {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #ddd;
 }
+
+.table-wrap {
+  overflow-x: auto;
+}

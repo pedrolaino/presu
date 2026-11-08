@@ -7,9 +7,10 @@ import { displayStatus } from "@/domain/status";
 import { diffItems, latestVersion, liveVersion } from "@/domain/versions";
 import { eventLabels, formatDateTime, statusLabels } from "@/lib/labels";
 import { formatMoney, formatQuantity } from "@/lib/numbers";
-import { duplicate, markAsSent } from "@/server/actions/quotes";
+import { ShareButtons } from "@/components/share-buttons";
+import { duplicate, markAsSent, regenerateLink, revokeLink } from "@/server/actions/quotes";
 import { getQuote } from "@/server/data/quotes";
-import { requireBusiness } from "@/server/session";
+import { appOrigin, requireBusiness } from "@/server/session";
 
 const errors: Record<string, string> = {
   send: "La fecha de validez ya pasó. Editá el presupuesto y cambiala antes de enviarlo.",
@@ -30,6 +31,8 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
   const live = liveVersion(versions)!;
   const status = displayStatus({ status: quote.status, validUntil: live.validUntil }, now);
   const editable = quote.status !== "accepted" && quote.status !== "rejected";
+  const url = quote.shareToken ? `${await appOrigin()}/p/${quote.shareToken}` : null;
+  const number = formatQuoteNumber(quote.number);
 
   return (
     <div className="stack">
@@ -61,7 +64,35 @@ export default async function QuoteDetail({ params, searchParams }: PageProps<"/
         <form action={duplicate.bind(null, quote.id)}>
           <button type="submit">Duplicar</button>
         </form>
+        {status === "expired" && <Link href={`/app/quotes/${quote.id}/reactivate`}>Reactivar</Link>}
       </div>
+
+      <section className="stack" aria-labelledby="share-title">
+        <h2 id="share-title">Compartir</h2>
+        {url ? (
+          <>
+            <p>
+              Link para el cliente: <code>{url}</code>
+            </p>
+            <ShareButtons
+              quoteId={quote.id}
+              url={url}
+              pdfName={`presupuesto-${number.slice(1)}.pdf`}
+              message={`¡Hola ${latest.client.name}! Te paso el presupuesto ${number} de ${business.name}. Lo podés ver y aceptar desde acá: ${url}`}
+            />
+            <form action={revokeLink.bind(null, quote.id)}>
+              <button type="submit">Desactivar link</button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p>El link está desactivado: nadie puede ver el presupuesto.</p>
+            <form action={regenerateLink.bind(null, quote.id)}>
+              <button type="submit">Generar link nuevo</button>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className="stack" aria-labelledby="content-title">
         <h2 id="content-title">
