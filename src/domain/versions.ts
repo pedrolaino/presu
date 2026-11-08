@@ -76,3 +76,12 @@ export function repriceFromCatalog(
   });
   return { items: repriced, changes };
 }
+
+export function latestVersion<T extends { version: number }>(versions: T[]): T | undefined {
+  return versions.reduce<T | undefined>((a, v) => (!a || v.version > a.version ? v : a), undefined);
+}
+
+/** The version the client sees: the latest sent one, or the latest draft if none was sent. */
+export function liveVersion<T extends { version: number; sentAt: Date | null }>(versions: T[]) {
+  return latestVersion(versions.filter((v) => v.sentAt)) ?? latestVersion(versions);
+}
