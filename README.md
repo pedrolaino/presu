@@ -5,29 +5,27 @@ Quotes for Argentine tradespeople and freelancers: build them from your price li
 [![CI](https://github.com/pedrolaino/presu/actions/workflows/ci.yml/badge.svg)](https://github.com/pedrolaino/presu/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Live demo: [presu-pedrolaino.vercel.app](https://presu-pedrolaino.vercel.app)** — click "Probar con datos de ejemplo" to look around with sample data, no account needed.
+**Live demo: [presu-pedrolaino.vercel.app](https://presu-pedrolaino.vercel.app)**. Click "Probar con datos de ejemplo" to try it with sample data, no account needed.
 
 ![Quote detail with the accepted version, sharing options and history](docs/images/quote.png)
 
-The interface and the PDFs are in Rioplatense Spanish; the code is in English.
-
 ## Why
 
-Electricians, carpenters, designers and technicians in Argentina usually send quotes as hand-made PDFs over WhatsApp. That leaves three questions open: did the client open it, are the prices still current with inflation, and which version did they actually agree to? Presu answers all three.
+Electricians, carpenters, designers and technicians in Argentina usually send quotes as hand-made PDFs over WhatsApp. They can't tell whether the client opened the file, prices go stale fast with inflation, and when the client says yes it isn't clear which version they agreed to. With Presu the client gets a link instead of a file, so the owner can see when it was opened and exactly which version was accepted. Expired quotes can be sent again with today's catalog prices.
 
 ## Features
 
-- **Quotes** with catalog or free-form items, decimal quantities (2,5 m²), a global discount (percent or fixed), three VAT modes and ARS or USD
-- **Per-business numbering** (#0001, #0002…) that never repeats, even with simultaneous creations
-- **Public link** for the client: mobile-first, no login, accept with a name or reject with an optional reason
-- **"Viewed" tracking** the first time someone other than the owner opens the link
-- **Share** by copying the link, opening WhatsApp with a message, or sending the PDF through the phone's share sheet
-- **Versions**: editing a sent quote creates a new version with a diff; the accepted version is frozen
-- **Expiry and reactivation**: expired quotes can be reissued with current catalog prices after previewing the changes
-- **Catalog** with categories, VAT rates and bulk price increases with a preview
-- **Server-rendered PDFs** with the business logo and the same typography as the app
-- **Dashboard** with acceptance rate, average response time, quotes expiring this week and accepted amounts per month by currency
-- **Guest mode** that creates a temporary account full of realistic data; it is deleted after 24 hours
+- Quotes with catalog or free-form items, decimal quantities (2,5 m²), a percent or fixed discount, three VAT modes, in ARS or USD
+- Sequential numbers per business (#0001, #0002...), safe under concurrent creation
+- Public page for the client that works on a phone without logging in, where they accept with their name or reject with an optional reason
+- "Viewed" mark the first time someone other than the owner opens the link
+- Sharing by copying the link, opening WhatsApp with a message, or sending the PDF from the phone's share menu
+- Versions: editing a sent quote creates a new one and shows what changed; an accepted version can't be edited
+- Reactivating an expired quote with current catalog prices, after previewing the differences
+- Catalog with categories, VAT rates and bulk price increases with a preview
+- PDFs rendered on the server, with the business logo
+- Dashboard with acceptance rate, average response time, quotes expiring this week and accepted amounts per month by currency
+- Guest mode: a temporary account with sample data, deleted after 24 hours
 
 <p align="center">
   <img src="docs/images/client-phone.png" alt="The public quote page as the client sees it on a phone" width="320">
@@ -75,25 +73,47 @@ flowchart LR
   Data --> DB
 ```
 
-**Business rules are pure functions.** Everything that decides money or state lives in [`src/domain`](src/domain): totals, rounding, status transitions, version diffs, repricing, bulk increases and metrics. These modules import nothing from Next or the database, and the current time and randomness are passed in, so the tests are deterministic. The UI reuses the same functions to show live totals in the editor, and the server recomputes them on save.
+### Business rules
 
-**Money is integers.** Amounts are stored as cents in `bigint` columns, quantities as hundredths (2,5 becomes 250) and VAT rates as basis points (21 % becomes 2100). Every division rounds half up to the cent, once per line, once for a percent discount and once per VAT rate. The discount is applied before VAT and split across rates with the largest-remainder method, so the per-rate bases always add up. Intermediate products use `BigInt`, and anything that would exceed `Number.MAX_SAFE_INTEGER` is rejected instead of silently losing precision. Formatting with `Intl.NumberFormat("es-AR")` happens only in the presentation layer.
+Everything that decides money or state lives in [`src/domain`](src/domain): totals, rounding, status transitions, version diffs, repricing, bulk increases and metrics. These modules import nothing from Next or the database, and the current time and randomness are passed in, so the tests are deterministic. The UI reuses the same functions to show live totals in the editor, and the server recomputes them on save.
 
-**State is stored, expiry is derived.** A quote moves `draft → sent → viewed → accepted | rejected`, and invalid transitions throw. `expired` is never written: it is computed when reading, from the validity date in Argentina time, for quotes that are `sent` or `viewed`.
+### Money
 
-**Versions are snapshots.** Each version stores its own copy of the client and the items as JSON, plus the computed total. Drafts and versions that were never sent are edited in place; editing a sent version adds a new one. The public link always shows the latest sent version, and an answer from the client names the version on screen, so a stale page cannot accept something the client never saw. Accepted quotes cannot be edited, only duplicated.
+Amounts are stored as cents in `bigint` columns, quantities as hundredths (2,5 becomes 250) and VAT rates as basis points (21 % becomes 2100). Every division rounds half up to the cent, once per line, once for a percent discount and once per VAT rate. The discount is applied before VAT and split across rates with the largest-remainder method, so the per-rate bases always add up. Intermediate products use `BigInt`, and anything that would exceed `Number.MAX_SAFE_INTEGER` is rejected instead of silently losing precision. Formatting with `Intl.NumberFormat("es-AR")` happens only in the presentation layer.
 
-**Numbering is a counter row.** Each business has a `next_quote_number` that is incremented with `UPDATE … RETURNING` inside the transaction that creates the quote. The row lock serializes concurrent creations, and a unique constraint on `(business_id, number)` backs it up. An integration test creates 25 quotes in parallel and checks the numbers are exactly 1 to 25.
+### Quote states
 
-**Every query is scoped by business.** The business id comes from the session, never from the request. Data functions take it as their first argument and filter by it, malformed ids are ignored, and integration tests check that one business cannot read or change another's clients, catalog or quotes.
+A quote moves `draft -> sent -> viewed -> accepted | rejected`, and invalid transitions throw. `expired` is never written: it is computed when reading, from the validity date in Argentina time, for quotes that are `sent` or `viewed`.
 
-**The public link is a 192-bit random token** that can be revoked and regenerated. "Viewed" is recorded by a small request from the browser rather than on page render, so link previews in chat apps do not count as a view.
+### Versions
 
-**Rate limits live in Postgres.** A fixed-window counter is updated with a single upsert, with no external service. It covers guest account creation, the public page, accepting or rejecting, and PDF generation, which is the most CPU-heavy route.
+Each version stores its own copy of the client and the items as JSON, plus the computed total. Drafts and versions that were never sent are edited in place; editing a sent version adds a new one. The public link always shows the latest sent version, and an answer from the client names the version on screen, so a stale page cannot accept something the client never saw. Accepted quotes cannot be edited, only duplicated.
 
-**Security headers.** A nonce-based Content Security Policy is set in `proxy.ts`, along with `nosniff`, a referrer policy, a permissions policy and HSTS. Logos are validated by their bytes, not their extension, capped at 200 KB, resized and stored as PNG.
+### Numbering
 
-Settings the owner may want to tune (validity days, guest lifetime, rate limits, logo limits) are in [`src/config.ts`](src/config.ts). Colors and sizes are CSS variables at the top of [`src/app/globals.css`](src/app/globals.css).
+Each business has a `next_quote_number` that is incremented with `UPDATE ... RETURNING` inside the transaction that creates the quote. The row lock serializes concurrent creations, and a unique constraint on `(business_id, number)` backs it up. An integration test creates 25 quotes in parallel and checks the numbers are exactly 1 to 25.
+
+### Data access
+
+The business id comes from the session, never from the request. Data functions take it as their first argument and filter by it, malformed ids are ignored, and integration tests check that one business cannot read or change another's clients, catalog or quotes.
+
+### Share links
+
+The public link is a 192-bit random token that can be revoked and regenerated. "Viewed" is recorded by a small request from the browser rather than on page render, so link previews in chat apps do not count as a view.
+
+### Rate limits
+
+Rate limiting uses a fixed-window counter in Postgres, updated with a single upsert, so there is no external service to run. It covers guest account creation, the public page, accepting or rejecting, and PDF generation, which is the most CPU-heavy route.
+
+### Security
+
+A nonce-based Content Security Policy is set in `proxy.ts`, along with `nosniff`, a referrer policy, a permissions policy and HSTS.
+
+Logos are checked by their bytes, not their extension, capped at 200 KB, resized and stored as PNG.
+
+### Configuration
+
+Settings you may want to change (validity days, guest lifetime, rate limits, logo limits) are in [`src/config.ts`](src/config.ts). Colors and sizes are CSS variables at the top of [`src/app/globals.css`](src/app/globals.css).
 
 ## Project structure
 
