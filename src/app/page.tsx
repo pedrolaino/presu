@@ -37,7 +37,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               Armá el presupuesto con tu lista de precios, mandalo por WhatsApp con un link y
               enterate cuándo lo abren y quién lo acepta. Sin PDFs armados a mano.
             </p>
-            <div className="actions" style={{ marginTop: "var(--s5)" }}>
+            <div className="actions hero-actions">
               <form action={startDemo}>
                 <button type="submit">Probar con datos de ejemplo</button>
               </form>
@@ -90,7 +90,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <section className="landing-section" aria-labelledby="problems-title">
           <h2 id="problems-title">Lo que se pierde con un PDF por WhatsApp</h2>
           <div className="problems">
-            <div className="stack">
+            <div className="problem">
               <Eye size={32} weight="duotone" aria-hidden className="ic" color="var(--green)" />
               <h3>Saber si lo abrió</h3>
               <p className="muted">
@@ -98,7 +98,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 preguntarle si le llegó.
               </p>
             </div>
-            <div className="stack">
+            <div className="problem">
               <HourglassMedium
                 size={32}
                 weight="duotone"
@@ -112,7 +112,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 hoy y ves qué cambió antes de mandarlo.
               </p>
             </div>
-            <div className="stack">
+            <div className="problem">
               <Stack size={32} weight="duotone" aria-hidden className="ic" color="var(--green)" />
               <h3>Qué versión aceptó</h3>
               <p className="muted">

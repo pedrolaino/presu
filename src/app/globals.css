@@ -1143,3 +1143,60 @@ td .bar {
     margin-top: 0;
   }
 }
+
+/* Landing details: icon beside its title, step number beside its text */
+.problem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.problem p {
+  grid-column: 1 / -1;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr;
+  column-gap: var(--s3);
+  align-content: start;
+}
+
+.steps li::before {
+  grid-row: span 2;
+  margin-bottom: 0;
+}
+
+.hero-actions {
+  margin-top: var(--s5);
+}
+
+@media (max-width: 40rem) {
+  .landing-head,
+  .hero,
+  .landing-section,
+  .site-foot {
+    padding-left: var(--s5);
+    padding-right: var(--s5);
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-actions button {
+    width: 100%;
+  }
+
+  .hero-preview {
+    margin: 0 calc(var(--s3) * -1);
+    padding: var(--s4) var(--s3);
+  }
+
+  .hero-preview .items li {
+    padding: var(--s3);
+  }
+}
