@@ -6,7 +6,8 @@ export const config = {
   logo: { maxBytes: 200 * 1024, maxSidePx: 400 },
   // Fixed-window limits stored in Postgres: `limit` hits per `windowSeconds`.
   rateLimits: {
-    guestPerIp: { limit: 5, windowSeconds: 3600 },
+    // Mobile carriers put many people behind one IP, so the per-IP limit stays generous.
+    guestPerIp: { limit: 20, windowSeconds: 3600 },
     guestGlobal: { limit: 300, windowSeconds: 3600 },
     publicView: { limit: 60, windowSeconds: 60 },
     publicRespond: { limit: 10, windowSeconds: 3600 },
