@@ -14,43 +14,45 @@ export function QuoteDocument({ version }: { version: typeof quoteVersions.$infe
 
   return (
     <div className="stack">
-      <table>
-        <caption className="visually-hidden">Ítems del presupuesto</caption>
-        <thead>
-          <tr>
-            <th scope="col">Descripción</th>
-            <th scope="col" className="num">
-              Cantidad
-            </th>
-            <th scope="col" className="num">
-              Precio unitario
-            </th>
-            {version.vatMode === "added" && (
+      <div className="table-wrap">
+        <table>
+          <caption className="visually-hidden">Ítems del presupuesto</caption>
+          <thead>
+            <tr>
+              <th scope="col">Descripción</th>
               <th scope="col" className="num">
-                IVA
+                Cantidad
               </th>
-            )}
-            <th scope="col" className="num">
-              Subtotal
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {version.items.map((item, i) => (
-            <tr key={i}>
-              <td>{item.name}</td>
-              <td className="num">
-                {formatQuantity(item.quantityHundredths)} {item.unit}
-              </td>
-              <td className="num">{money(item.unitPriceCents)}</td>
+              <th scope="col" className="num">
+                Precio unitario
+              </th>
               {version.vatMode === "added" && (
-                <td className="num">{formatPercent(item.vatRateBps)}</td>
+                <th scope="col" className="num">
+                  IVA
+                </th>
               )}
-              <td className="num">{money(totals.lineSubtotals[i])}</td>
+              <th scope="col" className="num">
+                Subtotal
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {version.items.map((item, i) => (
+              <tr key={i}>
+                <td>{item.name}</td>
+                <td className="num">
+                  {formatQuantity(item.quantityHundredths)} {item.unit}
+                </td>
+                <td className="num">{money(item.unitPriceCents)}</td>
+                {version.vatMode === "added" && (
+                  <td className="num">{formatPercent(item.vatRateBps)}</td>
+                )}
+                <td className="num">{money(totals.lineSubtotals[i])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <dl className="totals">
         <dt>Subtotal</dt>
