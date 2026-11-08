@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { InvalidTransitionError } from "./status";
-import { diffItems, planEdit, repriceFromCatalog, type VersionItem } from "./versions";
+import {
+  diffItems,
+  latestVersion,
+  liveVersion,
+  planEdit,
+  repriceFromCatalog,
+  type VersionItem,
+} from "./versions";
 
 const item = (over: Partial<VersionItem> = {}): VersionItem => ({
   catalogItemId: null,
@@ -102,5 +109,29 @@ describe("repriceFromCatalog", () => {
   it("does not list unchanged prices", () => {
     const items = [item({ catalogItemId: "a", unitPriceCents: 120_000 })];
     expect(repriceFromCatalog(items, catalog, "ARS").changes).toEqual([]);
+  });
+});
+
+describe("liveVersion", () => {
+  it("is the latest sent version, which is what the client sees", () => {
+    const v = (version: number, sent: boolean) => ({ version, sentAt: sent ? new Date() : null });
+    expect(liveVersion([v(1, true), v(2, true), v(3, false)])?.version).toBe(2);
+    expect(liveVersion([v(3, false), v(1, true)])?.version).toBe(1);
+  });
+
+  it("falls back to the latest draft when nothing was sent", () => {
+    expect(
+      liveVersion([
+        { version: 1, sentAt: null },
+        { version: 2, sentAt: null },
+      ])?.version,
+    ).toBe(2);
+    expect(liveVersion([])).toBeUndefined();
+  });
+});
+
+describe("latestVersion", () => {
+  it("is the highest version number", () => {
+    expect(latestVersion([{ version: 2 }, { version: 5 }, { version: 1 }])?.version).toBe(5);
   });
 });

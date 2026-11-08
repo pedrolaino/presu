@@ -11,7 +11,10 @@ export interface StatusInput {
 }
 
 export class InvalidTransitionError extends Error {
-  constructor(status: DisplayStatus, action: QuoteAction) {
+  constructor(
+    readonly status: DisplayStatus,
+    readonly action: QuoteAction,
+  ) {
     super(`Cannot ${action} a quote that is ${status}`);
   }
 }
