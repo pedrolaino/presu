@@ -5,6 +5,19 @@ const nextConfig: NextConfig = {
   // pdfkit reads its font metrics from disk at runtime.
   serverExternalPackages: ["pdfkit"],
   outputFileTracingIncludes: { "/**/pdf": ["./node_modules/pdfkit/js/data/**"] },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
