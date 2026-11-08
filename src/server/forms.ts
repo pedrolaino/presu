@@ -22,3 +22,8 @@ export const optionalEmail = text(120).refine(
   (v) => v === "" || z.email().safeParse(v).success,
   "Revisá el email.",
 );
+
+export const isUuid = (id: string) => z.uuid().safeParse(id).success;
+
+/** Escapes a user search for ILIKE. */
+export const likePattern = (search: string) => `%${search.replace(/[\\%_]/g, "\\$&")}%`;
