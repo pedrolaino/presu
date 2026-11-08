@@ -4,8 +4,10 @@
   "regions": ["gru1"],
   "git": {
     "deploymentEnabled": {
-      "*": false,
-      "main": true
+      "feature/**": false,
+      "fix/**": false,
+      "refactor/**": false,
+      "docs/**": false
     }
   }
 }
