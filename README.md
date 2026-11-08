@@ -11,21 +11,21 @@ Quotes for Argentine tradespeople and freelancers: build them from your price li
 
 ## Why
 
-Electricians, carpenters, designers and technicians in Argentina usually send quotes as hand-made PDFs over WhatsApp. They can't tell whether the client opened the file, prices go stale fast with inflation, and when the client says yes it isn't clear which version they agreed to. Presu tracks when a quote is opened, gives each one an expiry date, and keeps every version.
+Electricians, carpenters, designers and technicians in Argentina usually send quotes as hand-made PDFs over WhatsApp. They can't tell whether the client opened the file, prices go stale fast with inflation, and when the client says yes it isn't clear which version they agreed to. With Presu the client gets a link instead of a file, so the owner can see when it was opened and exactly which version was accepted. Expired quotes can be sent again with today's catalog prices.
 
 ## Features
 
 - Quotes with catalog or free-form items, decimal quantities (2,5 m²), a percent or fixed discount, three VAT modes, in ARS or USD
-- Sequential numbers per business (#0001, #0002…), safe under concurrent creation
-- A public page for the client that works on a phone without logging in, where they accept with their name or reject with an optional reason
-- A "viewed" mark the first time someone other than the owner opens the link
+- Sequential numbers per business (#0001, #0002...), safe under concurrent creation
+- Public page for the client that works on a phone without logging in, where they accept with their name or reject with an optional reason
+- "Viewed" mark the first time someone other than the owner opens the link
 - Sharing by copying the link, opening WhatsApp with a message, or sending the PDF from the phone's share menu
 - Versions: editing a sent quote creates a new one and shows what changed; an accepted version can't be edited
 - Reactivating an expired quote with current catalog prices, after previewing the differences
-- A catalog with categories, VAT rates and bulk price increases with a preview
+- Catalog with categories, VAT rates and bulk price increases with a preview
 - PDFs rendered on the server, with the business logo
-- A dashboard with acceptance rate, average response time, quotes expiring this week and accepted amounts per month by currency
-- A guest mode that creates a temporary account with sample data, deleted after 24 hours
+- Dashboard with acceptance rate, average response time, quotes expiring this week and accepted amounts per month by currency
+- Guest mode: a temporary account with sample data, deleted after 24 hours
 
 <p align="center">
   <img src="docs/images/client-phone.png" alt="The public quote page as the client sees it on a phone" width="320">
@@ -83,7 +83,7 @@ Amounts are stored as cents in `bigint` columns, quantities as hundredths (2,5 b
 
 ### Quote states
 
-A quote moves `draft → sent → viewed → accepted | rejected`, and invalid transitions throw. `expired` is never written: it is computed when reading, from the validity date in Argentina time, for quotes that are `sent` or `viewed`.
+A quote moves `draft -> sent -> viewed -> accepted | rejected`, and invalid transitions throw. `expired` is never written: it is computed when reading, from the validity date in Argentina time, for quotes that are `sent` or `viewed`.
 
 ### Versions
 
@@ -91,7 +91,7 @@ Each version stores its own copy of the client and the items as JSON, plus the c
 
 ### Numbering
 
-Each business has a `next_quote_number` that is incremented with `UPDATE … RETURNING` inside the transaction that creates the quote. The row lock serializes concurrent creations, and a unique constraint on `(business_id, number)` backs it up. An integration test creates 25 quotes in parallel and checks the numbers are exactly 1 to 25.
+Each business has a `next_quote_number` that is incremented with `UPDATE ... RETURNING` inside the transaction that creates the quote. The row lock serializes concurrent creations, and a unique constraint on `(business_id, number)` backs it up. An integration test creates 25 quotes in parallel and checks the numbers are exactly 1 to 25.
 
 ### Data access
 
