@@ -1,16 +1,14 @@
 import { Storefront } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { SidebarNav, TabBar } from "@/components/app-nav";
+import { Logo } from "@/components/logo";
 import { signOut } from "@/server/auth-actions";
 import { requireBusiness } from "@/server/session";
 
 function Brand() {
   return (
-    <Link href="/app/quotes" className="brand">
-      <span className="brand-mark" aria-hidden>
-        P
-      </span>
-      Presu
+    <Link href="/app/quotes" className="brand" aria-label="Presu, ir a presupuestos">
+      <Logo height={41} />
     </Link>
   );
 }

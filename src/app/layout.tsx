@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Presupuestos que se mandan por link y se siguen hasta que se aceptan.",
 };
 
-export const viewport: Viewport = { themeColor: "#faf6f0" };
+export const viewport: Viewport = { themeColor: "#1f5135" };
 
 // Every page renders per request so the CSP nonce reaches Next's scripts.
 export const dynamic = "force-dynamic";

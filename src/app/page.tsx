@@ -1,5 +1,6 @@
 import { CheckCircle, Eye, HourglassMedium, Stack } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { googleEnabled } from "@/server/auth";
 import { signInWithGoogle, startDemo } from "@/server/auth-actions";
 
@@ -14,12 +15,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <>
       <header className="landing-head">
-        <span className="brand" style={{ padding: 0 }}>
-          <span className="brand-mark" aria-hidden>
-            P
-          </span>
-          Presu
-        </span>
+        <Link href="/" className="brand" style={{ padding: 0 }}>
+          <Logo height={44} />
+        </Link>
         {googleEnabled && (
           <form action={signInWithGoogle}>
             <button type="submit" className="btn-secondary">

@@ -364,25 +364,19 @@ fieldset {
   padding: var(--s5) var(--s4);
 }
 
+/* Logo: clear space around it is at least one line of the symbol (see the brand kit). */
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--s2);
-  padding: 0 var(--s3) var(--s5);
-  color: var(--ink);
-  font: 600 var(--text-xl) / 1 var(--font-display);
-  text-decoration: none;
+  align-self: flex-start;
+  min-height: var(--tap);
+  padding: 0 var(--s2) var(--s5);
+  --logo-symbol: var(--green);
+  --logo-word: var(--ink);
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--r-sm);
-  background: var(--green);
-  color: #fff;
-  font-size: var(--text-lg);
+.brand svg {
+  display: block;
 }
 
 .nav-link {

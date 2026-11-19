@@ -1,4 +1,9 @@
-# Presu
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-white.svg">
+    <img src="docs/images/logo.svg" alt="Presu" height="72">
+  </picture>
+</h1>
 
 Quotes for Argentine tradespeople and freelancers: build them from your price list, send them as a link over WhatsApp, and see when the client opens and accepts them.
 
