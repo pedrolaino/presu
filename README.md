@@ -5,32 +5,32 @@
   </picture>
 </h1>
 
-Quotes for Argentine tradespeople and freelancers: build them from your price list, send them as a link over WhatsApp, and see when the client opens and accepts them.
+Presu is a quoting app for tradespeople and freelancers in Argentina. Build quotes from your price list, share a link on WhatsApp, and see when someone opens or accepts the quote.
 
 [![CI](https://github.com/pedrolaino/presu/actions/workflows/ci.yml/badge.svg)](https://github.com/pedrolaino/presu/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Live demo: [presu-pedrolaino.vercel.app](https://presu-pedrolaino.vercel.app)**. Click "Probar con datos de ejemplo" to try it with sample data, no account needed.
+**[Live demo](https://presu-pedrolaino.vercel.app)**. Click "Probar con datos de ejemplo" to try Presu with sample data. You can start without signing up.
 
 ![Quote detail with the accepted version, sharing options and history](docs/images/quote.png)
 
 ## Why
 
-Electricians, carpenters, designers and technicians in Argentina usually send quotes as hand-made PDFs over WhatsApp. They can't tell whether the client opened the file, prices go stale fast with inflation, and when the client says yes it isn't clear which version they agreed to. With Presu the client gets a link instead of a file, so the owner can see when it was opened and exactly which version was accepted. Expired quotes can be sent again with today's catalog prices.
+If you make quotes by hand and send them as PDFs over WhatsApp, it can be hard to tell whether the client opened the file or which version they agreed to. Inflation can make prices go stale while you're waiting for a reply. Presu records the first time someone other than the owner opens the link and keeps the version the client accepted. If a quote expires, you can update it with current catalog prices before you send it again.
 
 ## Features
 
-- Quotes with catalog or free-form items, decimal quantities (2,5 m²), a percent or fixed discount, three VAT modes, in ARS or USD
+- Build quotes with items from your catalog or custom items. Presu supports decimal quantities (2,5 m²), fixed or percentage discounts, and three VAT modes. A quote can be in ARS or USD.
 - Sequential numbers per business (#0001, #0002...), safe under concurrent creation
-- Public page for the client that works on a phone without logging in, where they accept with their name or reject with an optional reason
-- "Viewed" mark the first time someone other than the owner opens the link
+- Clients can open the public quote link on their phones without signing in. They enter their name to accept and can optionally give a reason when declining.
+- Presu marks the quote as "Viewed" the first time someone other than the owner opens the link.
 - Sharing by copying the link, opening WhatsApp with a message, or sending the PDF from the phone's share menu
-- Versions: editing a sent quote creates a new one and shows what changed; an accepted version can't be edited
-- Reactivating an expired quote with current catalog prices, after previewing the differences
+- Editing a sent version creates a revision and shows what changed. Presu locks accepted quotes for editing.
+- When a quote expires, preview the changes at current catalog prices before reactivating it.
 - Catalog with categories, VAT rates and bulk price increases with a preview
 - PDFs rendered on the server, with the business logo
 - Dashboard with acceptance rate, average response time, quotes expiring this week and accepted amounts per month by currency
-- Guest mode: a temporary account with sample data, deleted after 24 hours
+- Guest accounts come with sample data. They expire after 24 hours, and the cleanup job deletes them afterward.
 
 <p align="center">
   <img src="docs/images/client-phone.png" alt="The public quote page as the client sees it on a phone" width="320">
@@ -80,7 +80,7 @@ flowchart LR
 
 ### Business rules
 
-Everything that decides money or state lives in [`src/domain`](src/domain): totals, rounding, status transitions, version diffs, repricing, bulk increases and metrics. These modules import nothing from Next or the database, and the current time and randomness are passed in, so the tests are deterministic. The UI reuses the same functions to show live totals in the editor, and the server recomputes them on save.
+Totals, rounding, status transitions, version diffs, repricing, bulk price increases and metrics live in [`src/domain`](src/domain). These modules have no dependencies on Next.js or the database. They take the current time and randomness as inputs so tests can run deterministically. The editor uses the same rules to show totals as you type, and the server recalculates them when you save.
 
 ### Money
 
@@ -88,11 +88,11 @@ Amounts are stored as cents in `bigint` columns, quantities as hundredths (2,5 b
 
 ### Quote states
 
-A quote moves `draft -> sent -> viewed -> accepted | rejected`, and invalid transitions throw. `expired` is never written: it is computed when reading, from the validity date in Argentina time, for quotes that are `sent` or `viewed`.
+Sending a `draft` moves it to `sent`. Opening the public link can mark it `viewed`. A client can respond to an open quote in either `sent` or `viewed` state, moving it to `accepted` or `rejected`. Invalid transitions throw. When the app reads a `sent` or `viewed` quote, it displays `expired` if the validity date has passed in Argentina.
 
 ### Versions
 
-Each version stores its own copy of the client and the items as JSON, plus the computed total. Drafts and versions that were never sent are edited in place; editing a sent version adds a new one. The public link always shows the latest sent version, and an answer from the client names the version on screen, so a stale page cannot accept something the client never saw. Accepted quotes cannot be edited, only duplicated.
+Each version stores a JSON snapshot of the client and items, plus the computed total. Presu updates unsent versions in place and creates a new revision when you edit a sent one. The public link shows the latest sent version. The client's response includes the version they saw, so Presu can reject responses from an older page after a new revision is sent. Accepted quotes are locked for editing and can be duplicated.
 
 ### Numbering
 
@@ -100,11 +100,11 @@ Each business has a `next_quote_number` that is incremented with `UPDATE ... RET
 
 ### Data access
 
-The business id comes from the session, never from the request. Data functions take it as their first argument and filter by it, malformed ids are ignored, and integration tests check that one business cannot read or change another's clients, catalog or quotes.
+Data functions take the business ID as their first argument and use it to scope queries. The app gets that ID from the session. Malformed IDs are ignored. Integration tests check that one business cannot read or change another business's clients, catalog or quotes.
 
 ### Share links
 
-The public link is a 192-bit random token that can be revoked and regenerated. "Viewed" is recorded by a small request from the browser rather than on page render, so link previews in chat apps do not count as a view.
+Each public link contains a random 192-bit token. You can revoke the link and generate a new one. The browser sends a separate request to mark a quote as "Viewed", so link previews in chat apps do not count as views.
 
 ### Rate limits
 
@@ -174,7 +174,7 @@ npm run lint
 npm run typecheck
 ```
 
-Integration tests run against the database in `.env.test` (`presu_test` by default) and apply the migrations before starting; they refuse to run against a database whose name does not contain `test`. The end-to-end tests use guest accounts, so they need no Google credentials.
+Integration tests apply migrations before running against the database in `.env.test` (`presu_test` by default). The database name must contain `test`. End-to-end tests use guest accounts and require no Google credentials.
 
 CI runs lint, format check, typecheck, unit and integration tests, the production build and the end-to-end tests on every pull request, with a Postgres service container.
 
@@ -183,7 +183,7 @@ CI runs lint, format check, typecheck, unit and integration tests, the productio
 Production runs on Vercel (Hobby) with a Neon database (free tier).
 
 1. Create a Neon project and copy the pooled connection string.
-2. Import the repository in Vercel. Only `main` is deployed; work branches are skipped by `vercel.json`.
+2. Import the repository in Vercel. `vercel.json` skips deployments for `feature/**`, `fix/**`, `refactor/**` and `docs/**` branches.
 3. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the public URL, no trailing slash), `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for the Production environment.
 4. In the Google OAuth client, add `https://<your-domain>/api/auth/callback/google` as an authorized redirect URI.
 

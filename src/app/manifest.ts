@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Presu",
     short_name: "Presu",
-    description: "Presupuestos que se mandan por link y se siguen hasta que se aceptan.",
+    description:
+      "Armá presupuestos con tu lista de precios, mandalos por WhatsApp y seguí las respuestas.",
     lang: "es-AR",
     start_url: "/app/quotes",
     display: "standalone",

@@ -7,7 +7,8 @@ const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree" });
 
 export const metadata: Metadata = {
   title: { default: "Presu", template: "%s · Presu" },
-  description: "Presupuestos que se mandan por link y se siguen hasta que se aceptan.",
+  description:
+    "Armá presupuestos con tu lista de precios, mandalos por WhatsApp y seguí las respuestas.",
 };
 
 export const viewport: Viewport = { themeColor: "#1f5135" };
