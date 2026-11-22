@@ -5,8 +5,8 @@ import { googleEnabled } from "@/server/auth";
 import { signInWithGoogle, startDemo } from "@/server/auth-actions";
 
 const sample = [
-  ["Instalación de tomacorriente", "6 unidad × $ 22.000,00", "$ 132.000,00"],
-  ["Cable unipolar 2,5 mm²", "45 metro × $ 1.250,00", "$ 56.250,00"],
+  ["Instalación de tomacorriente", "6 unidades × $ 22.000,00", "$ 132.000,00"],
+  ["Cable unipolar 2,5 mm²", "45 m × $ 1.250,00", "$ 56.250,00"],
   ["Térmica bipolar 2x20 A", "1 unidad × $ 16.500,00", "$ 16.500,00"],
 ];
 
@@ -32,8 +32,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <div>
             <h1>Presupuestos que tu cliente acepta desde el celular.</h1>
             <p className="hero-lead">
-              Armá el presupuesto con tu lista de precios, mandalo por WhatsApp con un link y
-              enterate cuándo lo abren y quién lo acepta. Sin PDFs armados a mano.
+              Armá el presupuesto con tu lista de precios y mandá el link por WhatsApp. Desde Presu
+              podés ver cuándo lo abren y con qué nombre lo aceptan.
             </p>
             <div className="actions hero-actions">
               <form action={startDemo}>
@@ -49,11 +49,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             </div>
             {demo === "limit" && (
               <p className="alert" role="alert" style={{ marginTop: "var(--s4)" }}>
-                Se crearon muchas cuentas de prueba seguidas. Probá de nuevo en un rato.
+                Por ahora no se pueden crear más cuentas de prueba. Probá de nuevo en un rato.
               </p>
             )}
             <p style={{ marginTop: "var(--s3)" }}>
-              <small>La prueba no pide datos y se borra sola a las 24 horas.</small>
+              <small>Probá sin registrarte. La cuenta de prueba dura 24 horas.</small>
             </p>
           </div>
 
@@ -86,14 +86,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
 
         <section className="landing-section" aria-labelledby="problems-title">
-          <h2 id="problems-title">Lo que se pierde con un PDF por WhatsApp</h2>
+          <h2 id="problems-title">Después de mandar el presupuesto</h2>
           <div className="problems">
             <div className="problem">
               <Eye size={32} weight="duotone" aria-hidden className="ic" color="var(--green)" />
-              <h3>Saber si lo abrió</h3>
+              <h3>Cuándo abrieron el link</h3>
               <p className="muted">
-                Presu registra la primera vez que tu cliente abre el link. Ya no hace falta
-                preguntarle si le llegó.
+                Presu registra la primera apertura del link sin contar tus propias visitas.
               </p>
             </div>
             <div className="problem">
@@ -104,18 +103,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 className="ic"
                 color="var(--green)"
               />
-              <h3>Precios que no quedan viejos</h3>
+              <h3>Actualizar un presupuesto vencido</h3>
               <p className="muted">
-                Cada presupuesto tiene fecha de validez. Si vence, lo reactivás con los precios de
-                hoy y ves qué cambió antes de mandarlo.
+                Cada presupuesto tiene fecha de vencimiento. Si vence, podés reactivarlo con los
+                precios actuales de tu catálogo y revisar qué cambió antes de volver a mandarlo.
               </p>
             </div>
             <div className="problem">
               <Stack size={32} weight="duotone" aria-hidden className="ic" color="var(--green)" />
               <h3>Qué versión aceptó</h3>
               <p className="muted">
-                Si lo cambiás después de mandarlo, queda una versión nueva. Lo que el cliente aceptó
-                no se toca nunca.
+                Si editás una versión que ya mandaste, Presu guarda una revisión. La versión que
+                aceptó tu cliente queda guardada tal como la vio.
               </p>
             </div>
           </div>
@@ -127,22 +126,24 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <li>
               <h3>Cargás tu lista de precios</h3>
               <p className="muted">
-                Materiales, horas de trabajo, servicios. En pesos o en dólares.
+                Podés cargar materiales, horas de trabajo y servicios en pesos o en dólares.
               </p>
             </li>
             <li>
               <h3>Armás el presupuesto</h3>
               <p className="muted">
-                Elegís el cliente y los ítems; el total con IVA se calcula solo.
+                Elegís el cliente y los ítems. Presu calcula el total con el IVA que corresponda.
               </p>
             </li>
             <li>
               <h3>Lo mandás por WhatsApp</h3>
-              <p className="muted">Tu cliente lo ve en el celular, sin crear ninguna cuenta.</p>
+              <p className="muted">Tu cliente puede abrir el link en el celu sin registrarse.</p>
             </li>
             <li>
               <h3>Lo acepta con su nombre</h3>
-              <p className="muted">Y vos lo ves en el momento, con todo el historial.</p>
+              <p className="muted">
+                En el historial ves cuándo lo aceptó tu cliente y el nombre que escribió.
+              </p>
             </li>
           </ol>
         </section>
